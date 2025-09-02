@@ -111,22 +111,23 @@ const RegisterScreen = () => {
                 icon="arrow-right-bold-circle"
                 buttonColor={colors.accent}
             >
-                Kayıt Ol
+                Giriş Yap
             </Button>
 
             <View style={styles.loginPrompt}>
-                <Text style={styles.promptText}>Zaten bir garajın var mı?</Text>
+                <Text style={styles.promptText}>Henüz bir garajın yok mu?</Text>
                 <Button
                     mode="text"
-                    onPress={() => navigation.navigate('Login')}
+                    onPress={() => navigation.navigate('Register')}
                     textColor={colors.accent}
                 >
-                    Giriş Yap
+                    Kaydol
                 </Button>
             </View>
         </View>
     );
 };
+
 
 // Stillerde renkler artık 'colors' objesinden okunuyor.
 const styles = StyleSheet.create({

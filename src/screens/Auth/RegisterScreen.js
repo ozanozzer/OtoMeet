@@ -16,25 +16,41 @@ const themeColors = {
 };
 
 const RegisterScreen = () => {
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
     const [loading, setLoading] = useState(false);
     const navigation = useNavigation();
 
+    const handleUsernameChange = (text) => {
+        // 1. Metni küçük harfe dönüştür.
+        let cleanedText = text.toLowerCase();
+
+        // 2. Boşlukları kaldır.
+        cleanedText = cleanedText.replace(/\s/g, '');
+
+        // 3. Geçersiz karakterleri (_ hariç) kaldır.
+        // İzin verilen karakterler: a-z, 0-9 ve _
+        cleanedText = cleanedText.replace(/[^a-z0-9_]/g, '');
+
+        setUsername(cleanedText);
+        };
+
     const handleRegister = async () => {
-        if (!email || !password) {
+        if (!username || !email || !password) {
             Alert.alert('Eksik Bilgi', 'Lütfen tüm alanları doldurun.');
             return;
         }
+        
         setLoading(true);
         try {
             // Gerçek senaryoda burada email ve password'ü servise göndermelisiniz.
             // await AuthService.register(email, password);
-            console.log('Kayıt denemesi:', email, password);
+            console.log('Kayıt denemesi:',username, email, password);
             await new Promise(resolve => setTimeout(resolve, 1500)); // Demo için bekleme
 
-            Alert.alert('Başarılı!', 'Sürücü koltuğuna hoş geldin!', [
+            Alert.alert('Başarılı!', 'Topluluğuna hoş geldin!', [
                 {
                     text: 'Devam Et',
                     onPress: () => navigation.replace('HomeScreen'),
@@ -62,11 +78,25 @@ const RegisterScreen = () => {
             />
 
             <Text variant="headlineLarge" style={styles.title}>
-                Kontrolü Ele Al
+                Topluluğuna Katıl
             </Text>
             <Text variant="bodyMedium" style={styles.subtitle}>
                 Yeni bir hesap oluşturarak yolculuğa başla.
             </Text>
+
+            <TextInput
+                label="Kullanıcı Adı (Özel Karakter Kullanılmaz)"
+                value={username}
+                onChangeText={setUsername}
+                style={styles.input}
+                mode="outlined"
+                autoCapitalize='none'
+                textColor={themeColors.text}
+                activeOutlineColor={themeColors.accent}
+                outlineColor={themeColors.border}
+                theme={{ colors: { onSurfaceVariant: themeColors.textSecondary } }}
+                left={<TextInput.Icon icon="account-circle-outline" color={themeColors.textSecondary} />}
+            />
 
             <TextInput
                 label="E-posta"
@@ -114,7 +144,7 @@ const RegisterScreen = () => {
                 icon="arrow-right-bold-circle"
                 buttonColor={themeColors.accent}
             >
-                Kayıt Ol
+                Kaydol
             </Button>
 
             <View style={styles.loginPrompt}>
