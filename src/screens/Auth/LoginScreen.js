@@ -22,7 +22,7 @@ const RegisterScreen = () => {
         setLoading(true);
         try {
             console.log('Kayıt denemesi:', email, password);
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await new Promise(resolve => setTimeout(resolve, 1500)); 
 
             Alert.alert('Başarılı!', 'Sürücü koltuğuna hoş geldin!', [
                 {
@@ -44,7 +44,7 @@ const RegisterScreen = () => {
             <StatusBar barStyle="light-content" />
 
             <LottieView
-                source={require('../../assets/animations/car_dashboard.json')}
+                source={require('../../assets/animations/car_dashboard.json')} 
                 autoPlay
                 loop
                 style={styles.lottie}
@@ -69,9 +69,9 @@ const RegisterScreen = () => {
                 activeOutlineColor={colors.accent}
                 outlineColor={colors.border}
                 // YENİ: Yuvarlaklığı artırmak ve renkleri temaya uygulamak için theme prop'u güncellendi
-                theme={{
+                theme={{ 
                     roundness: 12, // Bu değer input'ların köşe yuvarlaklığını artırır
-                    colors: { onSurfaceVariant: colors.textSecondary }
+                    colors: { onSurfaceVariant: colors.textSecondary } 
                 }}
                 left={<TextInput.Icon icon="email-outline" color={colors.textSecondary} />}
             />
@@ -87,9 +87,9 @@ const RegisterScreen = () => {
                 activeOutlineColor={colors.accent}
                 outlineColor={colors.border}
                 // YENİ: Yuvarlaklığı artırmak ve renkleri temaya uygulamak için theme prop'u güncellendi
-                theme={{
+                theme={{ 
                     roundness: 12, // Bu değer input'ların köşe yuvarlaklığını artırır
-                    colors: { onSurfaceVariant: colors.textSecondary }
+                    colors: { onSurfaceVariant: colors.textSecondary } 
                 }}
                 left={<TextInput.Icon icon="lock-outline" color={colors.textSecondary} />}
                 right={
