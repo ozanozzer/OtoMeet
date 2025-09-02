@@ -1,94 +1,100 @@
-import { View, Text, StyleSheet, Button, Alert, SafeAreaView } from 'react-native';
+// src/screens/Profile/ProfilScreen.js
+
 import React from 'react';
-import { useNavigation } from '@react-navigation/native';
-import { AuthService } from '../../services/AuthService';
+// DEĞİŞİKLİK: FlatList, Dimensions ve Image import edildi
+import { StyleSheet, View, FlatList, Dimensions, Image, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import colors from '../../constants/colors';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
-const ProfileScreen = () => {
-    const navigation = useNavigation();
+import ProfileHeader from '../../components/profile/ProfileHeader';
+import ProfileBio from '../../components/profile/ProfileBio';
+// ProfileContent import'u kaldırıldı
 
-    const handleLogout = () => {
-        // Kullanıcıya emin olup olmadığını soralım (iyi bir kullanıcı deneyimi için önemlidir)
-        Alert.alert(
-            "Çıkış Yap",
-            "Çıkış yapmak istediğinize emin misiniz?",
-            [
-                {
-                    text: "İptal",
-                    style: "cancel"
-                },
-                {
-                    text: "Evet, Çıkış Yap",
-                    onPress: async () => {
-                        try {
-                            await AuthService.logout();
-                            // Çıkış başarılı olursa, navigasyon geçmişini sıfırlayıp Login ekranına atıyoruz.
-                            // Bu, kullanıcının 'geri' tuşuyla tekrar profil ekranına dönmesini engeller.
-                            navigation.reset({
-                                index: 0,
-                                routes: [{ name: 'Login' }],
-                            });
-                        } catch (error) {
-                            Alert.alert("Hata", "Çıkış işlemi sırasında bir sorun oluştu.");
-                        }
-                    },
-                    style: 'destructive' // iOS'te metni kırmızı yapar
-                }
-            ]
-        );
+// Ekran genişliğini alarak 3 sütunlu bir grid oluşturalım
+const { width } = Dimensions.get('window');
+const postSize = (width) / 3; // Kenar boşluksuz tam 3'e bölme
+
+// YENİ: FlatList içinde her bir gönderiyi render edecek bileşen
+const PostItem = ({ post }) => (
+    <TouchableOpacity style={styles.postItem}>
+        <Image source={{ uri: post.image }} style={styles.postImage} />
+        {post.type === 'video' && (
+            <Ionicons name="play" size={24} color="white" style={styles.videoIcon} />
+        )}
+    </TouchableOpacity>
+);
+
+const ProfilScreen = () => {
+    const insets = useSafeAreaInsets();
+    // Modal ve Logout mantığı için gereken state ve fonksiyonları geri ekleyebilirsin
+    // const navigation = useNavigation();
+    // const [isSettingsVisible, setSettingsVisible] = useState(false);
+    // const handleLogout = () => { ... };
+
+    const userData = {
+        name: 'Aziz',
+        username: 'aziz_dev',
+        avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704a',
+        bio: '🚗 BMW F30 | Yazılım Geliştirici\nAnkara Buluşmaları Organizatörü',
+        stats: {
+            posts: 125,
+            followers: '12.5k',
+            following: 320,
+        }
     };
 
-    return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.container}>
-                <View style={styles.profileHeader}>
-                    <Ionicons name="person-circle-outline" size={100} color={colors.text} />
-                    <Text style={styles.emailText}>kullanici@email.com</Text>
-                    <Text style={styles.nameText}>Kullanıcı Adı</Text>
-                </View>
+    const userPosts = [
+        { id: '1', image: 'https://i0.shbdn.com/photos/19/23/19/x5_1256192319ogz.jpg', type: 'image' },
+        { id: '2', image: 'https://images.unsplash.com/photo-1617886322207-6f504e7472c5?w=500&q=80', type: 'image' },
+        { id: '3', image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80', type: 'image' },
+        { id: '4', image: 'https://images.unsplash.com/photo-1599551349122-19266e797a14?w=800&q=80', type: 'image' },
+        { id: '5', image: 'https://images.unsplash.com/photo-1617083293817-91361c4a179b?w=500&q=80', type: 'image' },
+        { id: '6', image: 'https://images.unsplash.com/photo-1617886322207-6f504e7472c5?w=500&q=80', type: 'image' },
+    ];
 
-                <View style={styles.buttonContainer}>
-                    <Button
-                        title="Çıkış Yap"
-                        onPress={handleLogout}
-                        color={colors.error} // Çıkış butonu için hata rengini kullanmak yaygındır
-                    />
-                </View>
-            </View>
-        </SafeAreaView>
+    // FlatList'in başlık bileşeni
+    const ListHeader = () => (
+        <>
+            <ProfileHeader user={userData} onSettingsPress={() => { /* setSettingsVisible(true) */ }} />
+            <ProfileBio bio={userData.bio} />
+        </>
+    );
+
+    return (
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+            <FlatList
+                data={userPosts}
+                renderItem={({ item }) => <PostItem post={item} />}
+                keyExtractor={item => item.id}
+                numColumns={3} // Izgaranın 3 sütunlu olmasını sağlar
+                ListHeaderComponent={ListHeader} // Başlık ve Bio'yu listenin en üstüne ekler
+                showsVerticalScrollIndicator={false}
+            />
+            {/* Modal kodunu buraya geri ekleyebilirsin */}
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: colors.background,
-    },
     container: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
+        backgroundColor: colors.surface,
     },
-    profileHeader: {
-        alignItems: 'center',
-        marginBottom: 50,
+    // YENİ: PostItem stilleri
+    postItem: {
+        width: postSize,
+        height: postSize,
     },
-    emailText: {
-        fontSize: 18,
-        color: colors.text,
-        fontWeight: '600',
-        marginTop: 15,
+    postImage: {
+        width: '100%',
+        height: '100%',
     },
-    nameText: {
-        fontSize: 16,
-        color: colors.textSecondary,
-        marginTop: 5,
+    videoIcon: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
     },
-    buttonContainer: {
-        width: '80%',
-    }
 });
 
-export default ProfileScreen;
+export default ProfilScreen;

@@ -3,7 +3,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import colors from '../constants/colors';
+import colors from '../../constants/colors';
 
 const FilterBar = () => (
     <View style={styles.filterBarContainer}>
