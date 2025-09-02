@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { TextInput, Button, Text } from 'react-native-paper';
 import LottieView from 'lottie-react-native';
 import { AuthService } from '../../services/AuthService';
+import { supabase } from '../../services/supabase';
 
 // Yeni renk paletimiz: Koyu, teknolojik ve odaklı.
 const themeColors = {
@@ -37,33 +38,49 @@ const RegisterScreen = () => {
         setUsername(cleanedText);
         };
 
-    const handleRegister = async () => {
-        if (!username || !email || !password) {
-            Alert.alert('Eksik Bilgi', 'Lütfen tüm alanları doldurun.');
+const handleRegister = async () => {
+    if (!username || !email || !password) {
+        Alert.alert('Eksik Bilgi', 'Lütfen tüm alanları doldurun.');
+        return;
+    }
+
+    setLoading(true);
+    try {
+        // Profil ekleme kodu SİLİNDİ.
+        // Username, options.data içine taşındı.
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    username: username,
+                    // Diğer profil verilerini de buraya ekleyebilirsiniz,
+                    // örneğin: car_model: carModel
+                }
+            }
+        });
+
+        if (error) {
+            Alert.alert('Kayıt Hatası', error.message);
             return;
         }
         
-        setLoading(true);
-        try {
-            // Gerçek senaryoda burada email ve password'ü servise göndermelisiniz.
-            // await AuthService.register(email, password);
-            console.log('Kayıt denemesi:',username, email, password);
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Demo için bekleme
+        // Tetikleyici geri kalanı hallettiği için burada başka bir işlem yapmaya gerek yok.
+        Alert.alert(
+            'Kaydınız alınmıştır',
+            'Doğrulama için lütfen mail adresinizdeki bağlantıya tıklayın.'
+        );
 
-            Alert.alert('Başarılı!', 'Topluluğuna hoş geldin!', [
-                {
-                    text: 'Devam Et',
-                    onPress: () => navigation.replace('HomeScreen'),
-                },
-            ]);
-
-        } catch (error) {
-            console.error(error);
-            Alert.alert('Bir Sorun Oluştu', 'Kayıt işlemi başarısız oldu. Lütfen tekrar deneyin.');
-        } finally {
-            setLoading(false);
-        }
-    };
+    } catch (error) {
+        console.error("Beklenmedik Hata:", error);
+        Alert.alert(
+            'Bir şeyler ters gitti :(',
+            'Lütfen daha sonra tekrar deneyiniz.'
+        );
+    } finally {
+        setLoading(false);
+    }
+};
 
     return (
         <View style={styles.container}>
