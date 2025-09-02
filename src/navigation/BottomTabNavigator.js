@@ -3,12 +3,14 @@ import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
 import HomeScreen from '../screens/Home/HomeScreen.js';
-// Diğer ekranlar için geçici bileşen
+import AntDesign from '@expo/vector-icons/AntDesign';
 const EmptyScreen = () => <View style={{ flex: 1, backgroundColor: colors.background }} />;
 
 import colors from '../constants/colors.js';
+import MeetingsScreen from '../screens/Events/MeetingsScreen.js';
+import MessageScreen from '../screens/Messages/MessagesScreen.js';
+import ProfilScreen from '../screens/Home/ProfilScreen.js';
 
 const Tab = createBottomTabNavigator();
 
@@ -68,7 +70,7 @@ const BottomTabNavigator = () => {
             />
             <Tab.Screen
                 name="Buluşmalar"
-                component={EmptyScreen}
+                component={MeetingsScreen}
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons name={focused ? "car-sport" : "car-sport-outline"} size={26} color={color} />
@@ -77,10 +79,19 @@ const BottomTabNavigator = () => {
             />
             <Tab.Screen
                 name="Mesajlar"
-                component={EmptyScreen}
+                component={MessageScreen}
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons name={focused ? "chatbubbles" : "chatbubbles-outline"} size={24} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Profil"  // Bu isim önemli! 'navigate' içinde bu kullanılır.
+                component={ProfilScreen} // ProfilScreen'i import etmeyi unutma
+                options={{
+                    tabBarIcon: ({ color, focused }) => (
+                        <AntDesign name="user" size={24} color={color} />
                     ),
                 }}
             />

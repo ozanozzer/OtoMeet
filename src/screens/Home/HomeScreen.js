@@ -1,16 +1,20 @@
 // src/screens/Home/HomeScreen.js
 
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+// DEĞİŞİKLİK 1: `useSafeAreaInsets` hook'unu import ediyoruz
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import colors from '../../constants/colors';
 
 // Bileşenlerimizi dışarıdan çağırıyoruz
-import HomeHeader from '../../components/HomeHeader';
-import FilterBar from '../../components/FilterBar';
-import PostCard from '../../components/PostCard';
+import HomeHeader from '../../components/home/HomeHeader';
+import FilterBar from '../../components/home/FilterBar';
+import PostCard from '../../components/home/PostCard';
 
 const HomeScreen = () => {
+    // DEĞİŞİKLİK 2: Hook'u çağırarak üst boşluğu alıyoruz
+    const insets = useSafeAreaInsets();
+
     // Örnek gönderi verileri
     const feedData = [
         {
@@ -36,7 +40,8 @@ const HomeScreen = () => {
     ];
 
     return (
-        <View style={styles.safeArea}>
+        // DEĞİŞİKLİK 3: Ana View'e dinamik paddingTop veriyoruz
+        <View style={[styles.container, { paddingTop: insets.top }]}>
             <HomeHeader />
             <FilterBar />
             <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -46,17 +51,19 @@ const HomeScreen = () => {
     );
 };
 
-// Artık sadece bu ekrana ait stiller burada
+// DEĞİŞİKLİK 4: Stil dosyasını güncelliyoruz
 const styles = StyleSheet.create({
-    safeArea: {
+    container: {
         flex: 1,
-        backgroundColor: colors.background,
-        paddingTop: 1,
+        // Header'ın arka planıyla bütünleşik olması için surface (beyaz) yapıyoruz
+        backgroundColor: colors.surface,
     },
     scrollContainer: {
+        // Kartların olduğu alanın farklı renkte olması için background (gri) yapıyoruz
+        backgroundColor: colors.background,
         paddingHorizontal: 10,
         paddingTop: 10,
-        paddingBottom: 100, // Alttaki navigasyon barının içeriği kapatmaması için
+        paddingBottom: 120, // Alttaki navigasyon barının içeriği kapatmaması için
     },
 });
 

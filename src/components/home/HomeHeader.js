@@ -3,7 +3,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import colors from '../constants/colors'; // Dosya yolu güncellendi
+import colors from '../../constants/colors'; // Dosya yolu güncellendi
 
 const HomeHeader = () => (
     <View style={styles.headerContainer}>

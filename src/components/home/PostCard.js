@@ -3,7 +3,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import colors from '../constants/colors';
+import colors from '../../constants/colors';
 
 const PostCard = ({ post }) => (
     <View style={styles.postCard}>
