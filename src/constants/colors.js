@@ -28,11 +28,13 @@ const colors = {
     success: '#36B37E',       // Başarı (Yeşil - accent ile benzer)
 
 
-    background: '#121212', // Zifiri siyaha yakın koyu gri
-    surface: '#1E1E1E',    // Input gibi yüzeyler için biraz daha açık ton
-    text: '#FFFFFF',
-    textSecondary: '#A9A9A9',
-    accent: '#E50914',      // Vurgu rengi (canlı bir kırmızı, stop lambası gibi)
-    border: '#2C2C2C',
+
+    background: '#F0F2F5', // Hafif kırık, göz yormayan beyaz (Uygulama arka planı)
+    surface: '#FFFFFF',    // Kartların ve pencerelerin rengi (Saf Beyaz)
+    text: '#050505',       // Ana metin rengi (Siyaha yakın)
+    textSecondary: '#65676B', // İkincil metinler (Tarih, kullanıcı adı vb.)
+    accent: '#4B7BEC',      // Ana vurgu rengi (Canlı ve modern bir mavi)
+    border: '#CED0D4',     // Çok ince ve soft sınırlar için
+    icon: '#8A8D91',       // Aktif olmayan ikonların rengi
 };
 export default colors;

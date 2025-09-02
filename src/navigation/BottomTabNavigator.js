@@ -1,73 +1,91 @@
-import { React } from 'react';
-import { StyleSheet } from 'react-native';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // 1. Gerekli hook'u import edin
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import HomeScreen from '../screens/Home/HomeScreen.js';
-import ProfileScreen from '../screens/Home/ProfilScreen.js';
-import Ionicons from '@expo/vector-icons/Ionicons';
+// Diğer ekranlar için geçici bileşen
+const EmptyScreen = () => <View style={{ flex: 1, backgroundColor: colors.background }} />;
+
 import colors from '../constants/colors.js';
 
 const Tab = createBottomTabNavigator();
 
 const BottomTabNavigator = () => {
-    // 2. Hook'u bileşen içinde çağırarak alttaki güvenli alan boşluğunu alın
     const insets = useSafeAreaInsets();
 
     return (
         <Tab.Navigator
-            screenOptions={({ route }) => ({
-                tabBarShowLabel: false,
-                // 3. Stili, alttaki boşluğu (insets.bottom) içerecek şekilde dinamik olarak güncelleyin
+            screenOptions={{
+                headerShown: false,
+                tabBarShowLabel: true,
+                tabBarActiveTintColor: colors.accent,
+                tabBarInactiveTintColor: colors.icon,
+
+                // GÜNCELLENMİŞ STİL - Daha Belirgin Boşluklarla
                 tabBarStyle: {
-                    ...styles.tabContainer,
-                    height: 70 + insets.bottom, // Orijinal yüksekliğe güvenli alan yüksekliğini ekleyin
-                    paddingBottom: insets.bottom, // İkonların güvenli alanın üstünde kalması için padding ekleyin
+                    position: 'absolute',
+                    // Konumlandırma
+                    bottom: insets.bottom > 0 ? insets.bottom : 10, // iPhone'larda home bar'ın hemen üstü, Android'de alttan 20 boşluk
+
+                    // YAN BOŞLUKLAR: Barı daraltıp havada durma hissini artırıyoruz
+                    left: 40,
+                    right: 40,
+
+                    // Estetik
+                    height: 70, // Daha tok bir yükseklik
+                    borderRadius: 35, // Yüksekliğin yarısı, mükemmel hap şekli için
+                    backgroundColor: colors.surface,
+                    borderTopWidth: 0,
+
+                    // İçerik hizalama
+                    paddingHorizontal: 10, // İkonların kenarlara yapışmasını engeller
+                    paddingBottom: 5, // Yazıların hizası için
+                    paddingTop: 5,
+
+                    // Gölgelendirme
+                    elevation: 10,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 5 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 10,
                 },
-                tabBarActiveTintColor: colors.primary, // Renk paletinizdeki doğru değişkenleri kullanalım
-                tabBarInactiveTintColor: colors.textSecondary,
-            })}
+                tabBarLabelStyle: {
+                    fontSize: 12,
+                    fontWeight: '600',
+                },
+            }}
         >
             <Tab.Screen
-                name="AnaSayfa"
+                name="Akış"
                 component={HomeScreen}
                 options={{
-                    headerShown: false,
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="home-outline" color={color} size={size} />
+                    tabBarIcon: ({ color, focused }) => (
+                        <Ionicons name={focused ? "grid" : "grid-outline"} size={24} color={color} />
                     ),
                 }}
             />
             <Tab.Screen
-                name="Profil"
-                component={ProfileScreen}
+                name="Buluşmalar"
+                component={EmptyScreen}
                 options={{
-                    headerShown: false,
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="person-outline" color={color} size={size} />
+                    tabBarIcon: ({ color, focused }) => (
+                        <Ionicons name={focused ? "car-sport" : "car-sport-outline"} size={26} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Mesajlar"
+                component={EmptyScreen}
+                options={{
+                    tabBarIcon: ({ color, focused }) => (
+                        <Ionicons name={focused ? "chatbubbles" : "chatbubbles-outline"} size={24} color={color} />
                     ),
                 }}
             />
         </Tab.Navigator>
     );
 };
-
-const styles = StyleSheet.create({
-    tabContainer: {
-        position: 'absolute',
-        bottom: 0,
-        width: '100%',
-        paddingTop: 15,
-        borderTopLeftRadius: 40,
-        borderTopRightRadius: 40,
-        elevation: 5,
-        justifyContent: 'space-around',
-        paddingHorizontal: 20,
-        alignItems: 'center',
-        backgroundColor: colors.surface, // Arka plan rengi eklemek genellikle daha iyi görünür
-        borderTopWidth: 1, // Kenarlık için
-        borderTopColor: colors.border,
-    },
-});
 
 export default BottomTabNavigator;

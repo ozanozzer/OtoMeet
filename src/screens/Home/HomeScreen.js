@@ -1,90 +1,62 @@
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, StatusBar } from 'react-native';
-import React from 'react';
-import colors from '../../constants/colors';
-import Ionicons from '@expo/vector-icons/Ionicons';
+// src/screens/Home/HomeScreen.js
 
-// Basit bir kart bileşeni
-const FeatureCard = ({ icon, title, description }) => (
-    <View style={styles.card}>
-        <Ionicons name={icon} size={32} color={colors.primary} />
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardDescription}>{description}</Text>
-    </View>
-);
+import React from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import colors from '../../constants/colors';
+
+// Bileşenlerimizi dışarıdan çağırıyoruz
+import HomeHeader from '../../components/HomeHeader';
+import FilterBar from '../../components/FilterBar';
+import PostCard from '../../components/PostCard';
 
 const HomeScreen = () => {
-    return (
-        <SafeAreaView style={styles.safeArea}>
-            <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-            <ScrollView contentContainerStyle={styles.container}>
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Ana Sayfa</Text>
-                    <Text style={styles.headerSubtitle}>Hoş geldin, kullanıcı!</Text>
-                </View>
+    // Örnek gönderi verileri
+    const feedData = [
+        {
+            id: 1,
+            username: 'can_sahin',
+            userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
+            timestamp: '2 saat önce',
+            caption: 'Hafta sonu kaçamağı... Harika bir gündü! #bmw #m4 #carlife',
+            postImage: 'https://i0.shbdn.com/photos/19/23/19/x5_1256192319ogz.jpg',
+            likeCount: 356,
+            commentCount: 42,
+        },
+        {
+            id: 2,
+            username: 'aylin_garage',
+            userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704e',
+            timestamp: 'Dün, 18:30',
+            caption: 'Yeni canavar geldi! Sizce ilk modifiye ne olmalı? Fikirlerinizi bekliyorum. #audi #rs6',
+            postImage: 'https://images.unsplash.com/photo-1617886322207-6f504e7472c5?w=500&q=80',
+            likeCount: 1204,
+            commentCount: 188,
+        },
+    ];
 
-                <FeatureCard
-                    icon="qr-code-outline"
-                    title="QR Kod Okut"
-                    description="Hızlı ve güvenli bir şekilde QR kodlarını okutarak işlemlerini tamamla."
-                />
-                <FeatureCard
-                    icon="stats-chart-outline"
-                    title="İstatistikler"
-                    description="Kullanım verilerini ve geçmiş aktivitelerini buradan görüntüle."
-                />
-                <FeatureCard
-                    icon="notifications-outline"
-                    title="Bildirimler"
-                    description="Sana özel yeni bildirimleri ve duyuruları kaçırma."
-                />
+    return (
+        <View style={styles.safeArea}>
+            <HomeHeader />
+            <FilterBar />
+            <ScrollView contentContainerStyle={styles.scrollContainer}>
+                {feedData.map(post => <PostCard key={post.id} post={post} />)}
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 };
 
+// Artık sadece bu ekrana ait stiller burada
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: colors.background,
+        paddingTop: 1,
     },
-    container: {
-        padding: 20,
-    },
-    header: {
-        marginBottom: 30,
-    },
-    headerTitle: {
-        fontSize: 34,
-        fontWeight: 'bold',
-        color: colors.text,
-    },
-    headerSubtitle: {
-        fontSize: 18,
-        color: colors.textSecondary,
-        marginTop: 5,
-    },
-    card: {
-        backgroundColor: colors.surface,
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    cardTitle: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: colors.text,
-        marginTop: 10,
-    },
-    cardDescription: {
-        fontSize: 14,
-        color: colors.textSecondary,
-        marginTop: 5,
-        lineHeight: 20,
+    scrollContainer: {
+        paddingHorizontal: 10,
+        paddingTop: 10,
+        paddingBottom: 100, // Alttaki navigasyon barının içeriği kapatmaması için
     },
 });
 
