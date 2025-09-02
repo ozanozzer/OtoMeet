@@ -1,83 +1,134 @@
-import { View, Text, TextInput, Button, StyleSheet, Alert, Pressable } from 'react-native';
+import { View, StyleSheet, Alert, StatusBar } from 'react-native';
 import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
+import { TextInput, Button, Text } from 'react-native-paper';
+import LottieView from 'lottie-react-native';
+import { AuthService } from '../../services/AuthService';
+import colors from '../../constants/colors'; // Renkler artık merkezi dosyadan geliyor.
 
-// Renk paletimizi ve sabitlerimizi import ediyoruz
-import colors from '../../constants/colors';
-
-const LoginScreen = () => {
+const RegisterScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [secureTextEntry, setSecureTextEntry] = useState(true);
+    const [loading, setLoading] = useState(false);
     const navigation = useNavigation();
 
-    const handleLogin = () => {
-        // Girdi kontrolü
+    // handleRegister fonksiyonu aynı kalıyor...
+    const handleRegister = async () => {
         if (!email || !password) {
-            Alert.alert('Giriş Hatası', 'Lütfen e-posta ve şifre alanlarını doldurun.');
+            Alert.alert('Eksik Bilgi', 'Lütfen tüm alanları doldurun.');
             return;
         }
+        setLoading(true);
+        try {
+            console.log('Kayıt denemesi:', email, password);
+            await new Promise(resolve => setTimeout(resolve, 1500)); 
 
-        // --- Gerçek Uygulama Mantığı ---
-        // Burada normalde bir AuthService çağrısı yapılır,
-        // sunucuya e-posta ve şifre gönderilir,
-        // başarılı olursa token alınır ve kaydedilir.
-        // Şimdilik sadece bir uyarı gösterip HomeScreen'e yönlendirelim.
-        console.log('Giriş denendi:', { email, password });
-
-        Alert.alert('Giriş Başarılı', 'Hoş geldiniz!', [
-            {
-                text: 'Devam Et',
-                onPress: () => {
-                    // Giriş başarılı olduğunda SplashScreen'e geri dönülmesini engellemek için 'replace' kullanıyoruz.
-                    navigation.replace('HomeScreen');
+            Alert.alert('Başarılı!', 'Sürücü koltuğuna hoş geldin!', [
+                {
+                    text: 'Devam Et',
+                    onPress: () => navigation.replace('HomeScreen'),
                 },
-            },
-        ]);
+            ]);
+
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Bir Sorun Oluştu', 'Kayıt işlemi başarısız oldu. Lütfen tekrar deneyin.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Hoş Geldiniz</Text>
-            <Text style={styles.subtitle}>Devam etmek için giriş yapın</Text>
+            <StatusBar barStyle="light-content" />
+
+            <LottieView
+                source={require('../../assets/animations/car_dashboard.json')} 
+                autoPlay
+                loop
+                style={styles.lottie}
+            />
+
+            <Text variant="headlineLarge" style={styles.title}>
+                Kontrolü Ele Al
+            </Text>
+            <Text variant="bodyMedium" style={styles.subtitle}>
+                Yeni bir hesap oluşturarak yolculuğa başla.
+            </Text>
 
             <TextInput
-                style={styles.input}
-                placeholder="E-posta Adresiniz"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="email-address"
-                autoCapitalize="none"
+                label="E-posta"
                 value={email}
                 onChangeText={setEmail}
-            />
-            <TextInput
                 style={styles.input}
-                placeholder="Şifreniz"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry // Şifrenin gizli olmasını sağlar
+                mode="outlined"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                textColor={colors.text}
+                activeOutlineColor={colors.accent}
+                outlineColor={colors.border}
+                // YENİ: Yuvarlaklığı artırmak ve renkleri temaya uygulamak için theme prop'u güncellendi
+                theme={{ 
+                    roundness: 12, // Bu değer input'ların köşe yuvarlaklığını artırır
+                    colors: { onSurfaceVariant: colors.textSecondary } 
+                }}
+                left={<TextInput.Icon icon="email-outline" color={colors.textSecondary} />}
+            />
+
+            <TextInput
+                label="Şifre"
                 value={password}
                 onChangeText={setPassword}
+                style={styles.input}
+                mode="outlined"
+                secureTextEntry={secureTextEntry}
+                textColor={colors.text}
+                activeOutlineColor={colors.accent}
+                outlineColor={colors.border}
+                // YENİ: Yuvarlaklığı artırmak ve renkleri temaya uygulamak için theme prop'u güncellendi
+                theme={{ 
+                    roundness: 12, // Bu değer input'ların köşe yuvarlaklığını artırır
+                    colors: { onSurfaceVariant: colors.textSecondary } 
+                }}
+                left={<TextInput.Icon icon="lock-outline" color={colors.textSecondary} />}
+                right={
+                    <TextInput.Icon
+                        icon={secureTextEntry ? "eye-off" : "eye"}
+                        color={colors.textSecondary}
+                        onPress={() => setSecureTextEntry(!secureTextEntry)}
+                    />
+                }
             />
 
-            {/* Şifremi Unuttum linki için bir Pressable */}
-            <Pressable style={styles.forgotPasswordContainer} onPress={() => navigation.navigate('ForgotPassword')}>
-                <Text style={styles.forgotPasswordText}>Şifremi Unuttum</Text>
-            </Pressable>
+            <Button
+                mode="contained"
+                onPress={handleRegister}
+                style={styles.button}
+                labelStyle={styles.buttonLabel}
+                loading={loading}
+                disabled={loading}
+                icon="arrow-right-bold-circle"
+                buttonColor={colors.accent}
+            >
+                Kayıt Ol
+            </Button>
 
-            {/* Giriş Butonu */}
-            <View style={styles.buttonContainer}>
-                <Button title="Giriş Yap" onPress={handleLogin} color={colors.primary} />
-            </View>
-
-            {/* Kayıt Ekranına Yönlendirme */}
-            <View style={styles.registerPrompt}>
-                <Text style={styles.promptText}>Hesabın yok mu?</Text>
-                <Button title="Hemen Kayıt Ol" onPress={() => navigation.navigate('Register')} color={colors.textLink} />
+            <View style={styles.loginPrompt}>
+                <Text style={styles.promptText}>Zaten bir garajın var mı?</Text>
+                <Button
+                    mode="text"
+                    onPress={() => navigation.navigate('Login')}
+                    textColor={colors.accent}
+                >
+                    Giriş Yap
+                </Button>
             </View>
         </View>
     );
 };
 
-// Stilleri renk paletimize göre düzenliyoruz
+// Stillerde renkler artık 'colors' objesinden okunuyor.
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -85,50 +136,45 @@ const styles = StyleSheet.create({
         padding: 20,
         backgroundColor: colors.background,
     },
+    lottie: {
+        width: '80%',
+        height: 180,
+        alignSelf: 'center',
+        marginBottom: 10,
+    },
     title: {
-        fontSize: 32,
+        textAlign: 'center',
         fontWeight: 'bold',
         color: colors.text,
-        textAlign: 'center',
+        letterSpacing: 1,
     },
     subtitle: {
-        fontSize: 16,
-        color: colors.textSecondary,
         textAlign: 'center',
-        marginBottom: 40,
+        marginBottom: 30,
+        color: colors.textSecondary,
     },
     input: {
-        width: '100%',
-        padding: 15,
-        borderWidth: 1,
-        borderColor: colors.border,
-        borderRadius: 8,
-        marginBottom: 15,
-        backgroundColor: colors.surfaceLight,
+        marginBottom: 12,
+        backgroundColor: colors.surface,
+    },
+    button: {
+        marginTop: 20,
+        borderRadius: 30, // Butonun yuvarlaklığını da input ile uyumlu hale getirelim
+        paddingVertical: 6,
+    },
+    buttonLabel: {
         fontSize: 16,
-        color: colors.text,
+        fontWeight: 'bold',
     },
-    buttonContainer: {
-        marginTop: 10,
-    },
-    forgotPasswordContainer: {
-        alignSelf: 'flex-end',
-        marginBottom: 20,
-    },
-    forgotPasswordText: {
-        color: colors.textLink,
-        fontSize: 14,
-    },
-    registerPrompt: {
-        marginTop: 30,
+    loginPrompt: {
+        marginTop: 24,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
     },
     promptText: {
         color: colors.textSecondary,
-        marginRight: 5,
     },
 });
 
-export default LoginScreen;
+export default RegisterScreen;

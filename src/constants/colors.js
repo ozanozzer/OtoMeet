@@ -26,5 +26,13 @@ const colors = {
     error: '#DE350B',         // Hata (Kırmızı)
     warning: '#FFAB00',       // Uyarı (Sarı/Turuncu)
     success: '#36B37E',       // Başarı (Yeşil - accent ile benzer)
+
+
+    background: '#121212', // Zifiri siyaha yakın koyu gri
+    surface: '#1E1E1E',    // Input gibi yüzeyler için biraz daha açık ton
+    text: '#FFFFFF',
+    textSecondary: '#A9A9A9',
+    accent: '#E50914',      // Vurgu rengi (canlı bir kırmızı, stop lambası gibi)
+    border: '#2C2C2C',
 };
 export default colors;
