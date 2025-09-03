@@ -90,12 +90,16 @@ const BottomTabNavigator = () => {
                 name="Profil"  // Bu isim önemli! 'navigate' içinde bu kullanılır.
                 component={ProfilScreen} // ProfilScreen'i import etmeyi unutma
                 options={{
+                    headerTitle: '',
+
                     tabBarIcon: ({ color, focused }) => (
                         <AntDesign name="user" size={24} color={color} />
                     ),
                 }}
             />
         </Tab.Navigator>
+
+        
     );
 };
 
