@@ -10,6 +10,7 @@ import BottomTabNavigator from './src/navigation/BottomTabNavigator';
 import LoginScreen from './src/screens/Auth/LoginScreen';
 import RegisterScreen from './src/screens/Auth/RegisterScreen';
 import SettingsScreen from './src/screens/Home/Profile/SettingsScreen';
+import EditProfileScreen from './src/screens/Home/Profile/EditProfileScreen'; 
 
 const Stack = createStackNavigator();
 
@@ -48,6 +49,16 @@ export default function App() {
               cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
             }}
           />
+
+          <Stack.Screen 
+            name="EditProfile" 
+            component={EditProfileScreen}
+            // Bu ekran için de soldan kayma animasyonu güzel durur
+            options={{
+              cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+            }}
+          />
+          
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider> // YENİ EKLENEN SARMALAYICI

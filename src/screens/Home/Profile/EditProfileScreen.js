@@ -1,0 +1,140 @@
+// src/screens/Profile/EditProfileScreen.js
+
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Alert, ScrollView } from 'react-native';
+import { Appbar, TextInput, Button, Avatar, ActivityIndicator, HelperText } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import { supabase } from '../../../services/supabase';
+import colors from '../../../constants/colors';
+
+const EditProfileScreen = () => {
+    const navigation = useNavigation();
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    // Form alanları için state'ler
+    const [username, setUsername] = useState('');
+    const [fullName, setFullName] = useState('');
+    const [biography, setBiography] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState('');
+
+    // Ekran ilk açıldığında mevcut profil bilgilerini çek
+    useEffect(() => {
+        const getProfile = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error("Kullanıcı bulunamadı.");
+
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select(`username, full_name, avatar_url, biography`)
+                    .eq('id', user.id)
+                    .single();
+
+                if (error) throw error;
+
+                if (data) {
+                    setUsername(data.username || '');
+                    setFullName(data.full_name || '');
+                    setBiography(data.biography || '');
+                    setAvatarUrl(data.avatar_url || '');
+                }
+            } catch (error) {
+                Alert.alert("Hata", "Profil bilgileri yüklenemedi.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        getProfile();
+    }, []);
+
+    // "Kaydet" butonuna basıldığında çalışacak fonksiyon
+    const handleUpdateProfile = async () => {
+        setSaving(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Kullanıcı bulunamadı.");
+
+            const updates = {
+                id: user.id,
+                full_name: fullName,
+                biography: biography,
+                avatar_url: avatarUrl,
+                updated_at: new Date(),
+            };
+
+            const { error } = await supabase.from('profiles').upsert(updates);
+            
+            if (error) throw error;
+            
+            Alert.alert("Başarılı", "Profilin güncellendi!");
+            navigation.goBack(); // Bir önceki ekrana (SettingsScreen) geri dön
+
+        } catch (error) {
+            Alert.alert("Hata", "Profil güncellenirken bir sorun oluştu.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return <ActivityIndicator style={{ flex: 1 }} animating={true} color={colors.accent} />;
+    }
+
+    return (
+        <View style={styles.container}>
+            <Appbar.Header style={styles.header}>
+                <Appbar.BackAction onPress={() => navigation.goBack()} color={colors.text} />
+                <Appbar.Content title="Profili Düzenle" titleStyle={styles.title} />
+                <Button onPress={handleUpdateProfile} textColor={colors.accent} disabled={saving} loading={saving}>
+                    Kaydet
+                </Button>
+            </Appbar.Header>
+
+            <ScrollView contentContainerStyle={styles.content}>
+                <Avatar.Image 
+                    size={120} 
+                    source={{ uri: avatarUrl || 'https://via.placeholder.com/150' }} 
+                    style={styles.avatar}
+                />
+                
+                <TextInput
+                    label="Kullanıcı Adı"
+                    value={username}
+                    disabled // Kullanıcı adları genellikle değiştirilemez
+                    style={styles.input}
+                    mode="outlined"
+                />
+                <HelperText type="info">Kullanıcı adları değiştirilemez.</HelperText>
+
+                <TextInput
+                    label="Tam Adınız"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    style={styles.input}
+                    mode="outlined"
+                />
+                <TextInput
+                    label="Biyografi"
+                    value={biography}
+                    onChangeText={setBiography}
+                    style={styles.input}
+                    mode="outlined"
+                    multiline
+                    numberOfLines={4}
+                />
+            </ScrollView>
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: { backgroundColor: colors.surface },
+    title: { fontWeight: 'bold' },
+    content: { padding: 20, alignItems: 'center' },
+    avatar: { marginBottom: 20 },
+    input: { width: '100%', marginTop: 10 },
+});
+
+export default EditProfileScreen;

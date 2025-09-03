@@ -29,7 +29,7 @@ const SettingsScreen = () => {
                     <List.Item
                         title="Profili Düzenle"
                         left={props => <List.Icon {...props} icon="account-edit-outline" />}
-                        onPress={() => console.log('Profili Düzenle')}
+                        onPress={() => navigation.navigate('EditProfile')}
                     />
                     <List.Item
                         title="Şifre Değiştir"
