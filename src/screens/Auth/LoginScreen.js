@@ -5,35 +5,44 @@ import { TextInput, Button, Text } from 'react-native-paper';
 import LottieView from 'lottie-react-native';
 import { AuthService } from '../../services/AuthService';
 import colors from '../../constants/colors'; // Renkler artık merkezi dosyadan geliyor.
+import { supabase } from '../../services/supabase';
 
-const RegisterScreen = () => {
+const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [secureTextEntry, setSecureTextEntry] = useState(true);
     const [loading, setLoading] = useState(false);
     const navigation = useNavigation();
 
-    // handleRegister fonksiyonu aynı kalıyor...
-    const handleRegister = async () => {
+    const handleLogin = async () => {
         if (!email || !password) {
             Alert.alert('Eksik Bilgi', 'Lütfen tüm alanları doldurun.');
             return;
         }
         setLoading(true);
         try {
-            console.log('Kayıt denemesi:', email, password);
-            await new Promise(resolve => setTimeout(resolve, 1500)); 
-
-            Alert.alert('Başarılı!', 'Sürücü koltuğuna hoş geldin!', [
+            const {data, error} = await supabase.auth.signInWithPassword(
                 {
-                    text: 'Devam Et',
-                    onPress: () => navigation.replace('HomeScreen'),
-                },
-            ]);
+                    email: email,
+                    password: password,
+                }
+            );
+
+            if(error){
+                if(error.message.includes("Email not confirmed")){
+                    Alert.alert('Doğrulama gerekli','Lütfen posta kutunuzu kontrol edin.');
+                }
+                else{
+                    Alert.alert('Giriş başarısız','E-Posta veya şifreniz hatalı.');
+                }
+                return;
+            }
+
+            navigation.replace('HomeScreen');
 
         } catch (error) {
-            console.error(error);
-            Alert.alert('Bir Sorun Oluştu', 'Kayıt işlemi başarısız oldu. Lütfen tekrar deneyin.');
+            Alert.alert('Bir Sorun Oluştu','Giriş işlemi sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+
         } finally {
             setLoading(false);
         }
@@ -51,10 +60,10 @@ const RegisterScreen = () => {
             />
 
             <Text variant="headlineLarge" style={styles.title}>
-                Kontrolü Ele Al
+                Topluluğa Katıl
             </Text>
             <Text variant="bodyMedium" style={styles.subtitle}>
-                Yeni bir hesap oluşturarak yolculuğa başla.
+                Garajına giriş yap yolculuğa başla
             </Text>
 
             <TextInput
@@ -103,7 +112,7 @@ const RegisterScreen = () => {
 
             <Button
                 mode="contained"
-                onPress={handleRegister}
+                onPress={handleLogin}
                 style={styles.button}
                 labelStyle={styles.buttonLabel}
                 loading={loading}
@@ -178,4 +187,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default RegisterScreen;
+export default LoginScreen;
