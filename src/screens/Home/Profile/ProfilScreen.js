@@ -8,8 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 // Menu ve IconButton import edildi
 import { Avatar, Text, Button, ActivityIndicator, Divider, Title, Paragraph, IconButton } from 'react-native-paper'; 
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../../services/supabase';
-import colors from '../../constants/colors';// TEMİZLENMİŞ KODU BURADAN KOPYALA
+import { supabase } from '../../../services/supabase';
+import colors from '../../../constants/colors';// TEMİZLENMİŞ KODU BURADAN KOPYALA
 
 const { width } = Dimensions.get('window');
 const postSize = width / 3;

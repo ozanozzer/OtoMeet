@@ -10,7 +10,7 @@ const EmptyScreen = () => <View style={{ flex: 1, backgroundColor: colors.backgr
 import colors from '../constants/colors.js';
 import MeetingsScreen from '../screens/Events/MeetingsScreen.js';
 import MessageScreen from '../screens/Messages/MessagesScreen.js';
-import ProfilScreen from '../screens/Home/ProfilScreen.js';
+import ProfilScreen from '../screens/Home/Profile/ProfilScreen.js';
 
 const Tab = createBottomTabNavigator();
 

@@ -9,7 +9,7 @@ import SplashScreen from './src/screens/Auth/SplashScreen';
 import BottomTabNavigator from './src/navigation/BottomTabNavigator';
 import LoginScreen from './src/screens/Auth/LoginScreen';
 import RegisterScreen from './src/screens/Auth/RegisterScreen';
-import SettingsScreen from './src/screens/Home/SettingsScreen';
+import SettingsScreen from './src/screens/Home/Profile/SettingsScreen';
 
 const Stack = createStackNavigator();
 

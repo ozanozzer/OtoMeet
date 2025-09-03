@@ -4,7 +4,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Appbar, Title, List, Divider } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import colors from '../../constants/colors';
+import colors from '../../../constants/colors';
 
 const SettingsScreen = () => {
     const navigation = useNavigation();
