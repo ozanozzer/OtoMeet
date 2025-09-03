@@ -5,18 +5,10 @@ import { TextInput, Button, Text } from 'react-native-paper';
 import LottieView from 'lottie-react-native';
 import { AuthService } from '../../services/AuthService';
 import { supabase } from '../../services/supabase';
-
-// Yeni renk paletimiz: Koyu, teknolojik ve odaklı.
-const themeColors = {
-    background: '#121212', // Zifiri siyaha yakın koyu gri
-    surface: '#1E1E1E',    // Input gibi yüzeyler için biraz daha açık ton
-    text: '#FFFFFF',
-    textSecondary: '#A9A9A9',
-    accent: '#E50914',      // Vurgu rengi (canlı bir kırmızı, stop lambası gibi)
-    border: '#2C2C2C',
-};
+import colors from '../../constants/colors'; // <-- DEĞİŞİKLİK: Renkler artık merkezi dosyadan geliyor.
 
 const RegisterScreen = () => {
+    // --- BU BÖLÜMDEKİ HİÇBİR KODA DOKUNULMADI ---
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -25,70 +17,61 @@ const RegisterScreen = () => {
     const navigation = useNavigation();
 
     const handleUsernameChange = (text) => {
-        // 1. Metni küçük harfe dönüştür.
         let cleanedText = text.toLowerCase();
-
-        // 2. Boşlukları kaldır.
         cleanedText = cleanedText.replace(/\s/g, '');
-
-        // 3. Geçersiz karakterleri (_ hariç) kaldır.
-        // İzin verilen karakterler: a-z, 0-9 ve _
         cleanedText = cleanedText.replace(/[^a-z0-9_]/g, '');
-
         setUsername(cleanedText);
-        };
+    };
 
-const handleRegister = async () => {
-    if (!username || !email || !password) {
-        Alert.alert('Eksik Bilgi', 'Lütfen tüm alanları doldurun.');
-        return;
-    }
-
-    setLoading(true);
-    try {
-        // Profil ekleme kodu SİLİNDİ.
-        // Username, options.data içine taşındı.
-        const { data, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-                data: {
-                    username: username,
-                    // Diğer profil verilerini de buraya ekleyebilirsiniz,
-                    // örneğin: car_model: carModel
-                }
-            }
-        });
-
-        if (error) {
-            Alert.alert('Kayıt Hatası', error.message);
+    const handleRegister = async () => {
+        if (!username || !email || !password) {
+            Alert.alert('Eksik Bilgi', 'Lütfen tüm alanları doldurun.');
             return;
         }
-        
-        // Tetikleyici geri kalanı hallettiği için burada başka bir işlem yapmaya gerek yok.
-        Alert.alert(
-            'Kaydınız alınmıştır',
-            'Doğrulama için lütfen mail adresinizdeki bağlantıya tıklayın.'
-        );
 
-    } catch (error) {
-        console.error("Beklenmedik Hata:", error);
-        Alert.alert(
-            'Bir şeyler ters gitti :(',
-            'Lütfen daha sonra tekrar deneyiniz.'
-        );
-    } finally {
-        setLoading(false);
-    }
-};
+        setLoading(true);
+        try {
+            const { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        username: username,
+                    }
+                }
+            });
+
+            if (error) {
+                Alert.alert('Kayıt Hatası', error.message);
+                return;
+            }
+            
+            Alert.alert(
+                'Kaydınız alınmıştır',
+                'Doğrulama için lütfen mail adresinizdeki bağlantıya tıklayın.'
+            );
+
+        } catch (error) {
+            console.error("Beklenmedik Hata:", error);
+            Alert.alert(
+                'Bir şeyler ters gitti :(',
+                'Lütfen daha sonra tekrar deneyiniz.'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+    // --- MANTIK KODLARI BİTİŞİ ---
+
+// ... importlar ve fonksiyonların (handleRegister vb.) aynı kalıyor ...
 
     return (
         <View style={styles.container}>
-            {/* Koyu tema için status bar'ı beyaz yapar */}
-            <StatusBar barStyle="light-content" />
+            {/* AÇIK TEMA İÇİN: Status bar ikonlarını siyaha çevirir */}
+            <StatusBar barStyle="dark-content" />
 
             <LottieView
-                source={require('../../assets/animations/car_dashboard.json')} // Kendi dosya yolunuzu yazın
+                source={require('../../assets/animations/car_dashboard.json')}
                 autoPlay
                 loop
                 style={styles.lottie}
@@ -102,20 +85,23 @@ const handleRegister = async () => {
             </Text>
 
             <TextInput
-                label="Kullanıcı Adı (Özel Karakter Kullanılmaz)"
+                label="Kullanıcı Adı"
                 value={username}
-                onChangeText={setUsername}
+                onChangeText={handleUsernameChange}
                 style={styles.input}
                 mode="outlined"
                 autoCapitalize='none'
-                textColor={themeColors.text}
-                activeOutlineColor={themeColors.accent}
-                outlineColor={themeColors.border}
-                theme={{ colors: { onSurfaceVariant: themeColors.textSecondary } }}
-                left={<TextInput.Icon icon="account-circle-outline" color={themeColors.textSecondary} />}
+                textColor={colors.text} // BEYAZ TEMAYA UYUMLU RENKLER
+                activeOutlineColor={colors.accent}
+                outlineColor={colors.border}
+                theme={{ 
+                    roundness: 12,
+                    colors: { onSurfaceVariant: colors.textSecondary } 
+                }}
+                left={<TextInput.Icon icon="account-circle-outline" color={colors.textSecondary} />}
             />
 
-            <TextInput
+             <TextInput
                 label="E-posta"
                 value={email}
                 onChangeText={setEmail}
@@ -123,11 +109,14 @@ const handleRegister = async () => {
                 mode="outlined"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                textColor={themeColors.text}
-                activeOutlineColor={themeColors.accent}
-                outlineColor={themeColors.border}
-                theme={{ colors: { onSurfaceVariant: themeColors.textSecondary } }}
-                left={<TextInput.Icon icon="email-outline" color={themeColors.textSecondary} />}
+                textColor={colors.text} // BEYAZ TEMAYA UYUMLU RENKLER
+                activeOutlineColor={colors.accent}
+                outlineColor={colors.border}
+                theme={{ 
+                    roundness: 12,
+                    colors: { onSurfaceVariant: colors.textSecondary } 
+                }}
+                left={<TextInput.Icon icon="email-outline" color={colors.textSecondary} />}
             />
 
             <TextInput
@@ -137,15 +126,18 @@ const handleRegister = async () => {
                 style={styles.input}
                 mode="outlined"
                 secureTextEntry={secureTextEntry}
-                textColor={themeColors.text}
-                activeOutlineColor={themeColors.accent}
-                outlineColor={themeColors.border}
-                theme={{ colors: { onSurfaceVariant: themeColors.textSecondary } }}
-                left={<TextInput.Icon icon="lock-outline" color={themeColors.textSecondary} />}
+                textColor={colors.text} // BEYAZ TEMAYA UYUMLU RENKLER
+                activeOutlineColor={colors.accent}
+                outlineColor={colors.border}
+                theme={{ 
+                    roundness: 12,
+                    colors: { onSurfaceVariant: colors.textSecondary } 
+                }}
+                left={<TextInput.Icon icon="lock-outline" color={colors.textSecondary} />}
                 right={
                     <TextInput.Icon
                         icon={secureTextEntry ? "eye-off" : "eye"}
-                        color={themeColors.textSecondary}
+                        color={colors.textSecondary}
                         onPress={() => setSecureTextEntry(!secureTextEntry)}
                     />
                 }
@@ -155,11 +147,11 @@ const handleRegister = async () => {
                 mode="contained"
                 onPress={handleRegister}
                 style={styles.button}
-                labelStyle={styles.buttonLabel}
+                labelStyle={styles.buttonLabel} // Buton yazı rengi buradan ayarlanıyor
                 loading={loading}
                 disabled={loading}
                 icon="arrow-right-bold-circle"
-                buttonColor={themeColors.accent}
+                buttonColor={colors.accent}
             >
                 Kaydol
             </Button>
@@ -169,7 +161,7 @@ const handleRegister = async () => {
                 <Button
                     mode="text"
                     onPress={() => navigation.navigate('Login')}
-                    textColor={themeColors.accent}
+                    textColor={colors.accent}
                 >
                     Giriş Yap
                 </Button>
@@ -178,12 +170,13 @@ const handleRegister = async () => {
     );
 };
 
+// --- STYLESHEET, BEYAZ TEMAYA UYGUN HALE GETİRİLDİ ---
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
         padding: 20,
-        backgroundColor: themeColors.background,
+        backgroundColor: colors.background, // Açık tema arka planı
     },
     lottie: {
         width: '80%',
@@ -194,26 +187,27 @@ const styles = StyleSheet.create({
     title: {
         textAlign: 'center',
         fontWeight: 'bold',
-        color: themeColors.text,
-        letterSpacing: 1, // Harfler arası boşluk tasarıma modern bir hava katar
+        color: colors.text, // Açık tema metin rengi (siyah)
+        letterSpacing: 1,
     },
     subtitle: {
         textAlign: 'center',
         marginBottom: 30,
-        color: themeColors.textSecondary,
+        color: colors.textSecondary, // Açık tema ikincil metin rengi (gri)
     },
     input: {
         marginBottom: 12,
-        backgroundColor: themeColors.surface,
+        backgroundColor: colors.surface, // Açık tema yüzey rengi (beyaz)
     },
     button: {
         marginTop: 20,
-        borderRadius: 8,
+        borderRadius: 30,
         paddingVertical: 6,
     },
     buttonLabel: {
         fontSize: 16,
         fontWeight: 'bold',
+        color: colors.textLight, // Buton içindeki yazının beyaz olmasını sağlar
     },
     loginPrompt: {
         marginTop: 24,
@@ -222,7 +216,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     promptText: {
-        color: themeColors.textSecondary,
+        color: colors.textSecondary,
     },
 });
 
