@@ -6,7 +6,7 @@ import { StyleSheet, View, FlatList, Dimensions, Image, TouchableOpacity, Alert 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 // Menu ve IconButton import edildi
-import { Avatar, Text, Button, ActivityIndicator, Divider, Title, Paragraph, Menu, IconButton } from 'react-native-paper'; 
+import { Avatar, Text, Button, ActivityIndicator, Divider, Title, Paragraph, IconButton } from 'react-native-paper'; 
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import colors from '../../constants/colors';// TEMİZLENMİŞ KODU BURADAN KOPYALA
@@ -29,10 +29,7 @@ const ProfilScreen = () => {
 
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState(null);
-    const [isMenuVisible, setMenuVisible] = useState(false);
 
-    const openMenu = () => setMenuVisible(true);
-    const closeMenu = () => setMenuVisible(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -58,16 +55,6 @@ const ProfilScreen = () => {
         fetchProfile();
     }, []);
 
-    const handleLogout = async () => {
-        setLoading(true);
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-            Alert.alert('Hata', 'Çıkış yapılırken bir sorun oluştu');
-        } else {
-            navigation.replace('Login');
-        }
-        setLoading(false);
-    };
 
     if (loading) {
         return (
@@ -119,22 +106,14 @@ const ProfilScreen = () => {
             <View style={styles.customHeader}>
                 <View style={{width: 50}} />
                 <Title style={styles.headerTitle}>@{profile.username}</Title>
-                <Menu
-                    visible={isMenuVisible}
-                    onDismiss={closeMenu}
-                    anchor={
-                        <IconButton
-                            icon="cog-outline"
-                            iconColor={colors.text}
-                            size={28}
-                            onPress={openMenu}
-                        />
-                    }
-                >
-                    <Menu.Item onPress={() => { closeMenu(); }} title="Profili Düzenle" />
-                    <Divider />
-                    <Menu.Item onPress={() => { closeMenu(); handleLogout(); }} title="Çıkış Yap" />
-                </Menu>
+
+                <IconButton
+                    icon="cog-outline"
+                    iconColor={colors.text}
+                    size={28}
+                    onPress={() => navigation.navigate('Settings')} // Tıklanınca Settings'e git!
+                />
+                
             </View>
             <FlatList
                 data={userPosts}
