@@ -48,7 +48,13 @@ const RegisterScreen = () => {
             
             Alert.alert(
                 'Kaydınız alınmıştır',
-                'Doğrulama için lütfen mail adresinizdeki bağlantıya tıklayın.'
+                'Doğrulama için lütfen mail adresinizdeki bağlantıya tıklayın.',
+                [
+                    {
+                        text:'Giriş Yap',
+                        onPress: () => navigation.replace('Login'),
+                    }
+                ]
             );
 
         } catch (error) {
