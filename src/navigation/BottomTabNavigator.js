@@ -1,16 +1,15 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import HomeScreen from '../screens/Home/HomeScreen.js';
 import AntDesign from '@expo/vector-icons/AntDesign';
-const EmptyScreen = () => <View style={{ flex: 1, backgroundColor: colors.background }} />;
 
+// === GEREKLİ IMPORT'LARI TEMİZ BİR ŞEKİLDE YAPIYORUZ ===
 import colors from '../constants/colors.js';
-import MeetingsScreen from '../screens/Events/MeetingsScreen.js';
+import HomeScreen from '../screens/Home/HomeScreen.js';
+import SearchScreen from '../screens/Search/SearchScreen.js'; // 'Search' büyük harfle, doğru yol
 import MessageScreen from '../screens/Messages/MessagesScreen.js';
-import ProfilScreen from '../screens/Home/Profile/ProfilScreen.js';
+import ProfilScreen from '../screens/Home/Profile/ProfilScreen.js'; // Sadece bir kere import ediliyor
 
 const Tab = createBottomTabNavigator();
 
@@ -19,34 +18,24 @@ const BottomTabNavigator = () => {
 
     return (
         <Tab.Navigator
+            // --- screenOptions kısmında HİÇBİR DEĞİŞİKLİK YOK, MÜKEMMEL ---
             screenOptions={{
                 headerShown: false,
                 tabBarShowLabel: true,
                 tabBarActiveTintColor: colors.accent,
                 tabBarInactiveTintColor: colors.icon,
-
-                // GÜNCELLENMİŞ STİL - Daha Belirgin Boşluklarla
                 tabBarStyle: {
                     position: 'absolute',
-                    // Konumlandırma
-                    bottom: insets.bottom > 0 ? insets.bottom : 10, // iPhone'larda home bar'ın hemen üstü, Android'de alttan 20 boşluk
-
-                    // YAN BOŞLUKLAR: Barı daraltıp havada durma hissini artırıyoruz
+                    bottom: insets.bottom > 0 ? insets.bottom : 10,
                     left: 40,
                     right: 40,
-
-                    // Estetik
-                    height: 70, // Daha tok bir yükseklik
-                    borderRadius: 35, // Yüksekliğin yarısı, mükemmel hap şekli için
+                    height: 70,
+                    borderRadius: 35,
                     backgroundColor: colors.surface,
                     borderTopWidth: 0,
-
-                    // İçerik hizalama
-                    paddingHorizontal: 10, // İkonların kenarlara yapışmasını engeller
-                    paddingBottom: 5, // Yazıların hizası için
+                    paddingHorizontal: 10,
+                    paddingBottom: 5,
                     paddingTop: 5,
-
-                    // Gölgelendirme
                     elevation: 10,
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 5 },
@@ -59,6 +48,7 @@ const BottomTabNavigator = () => {
                 },
             }}
         >
+            {/* --- EKRANLARDA HİÇBİR DEĞİŞİKLİK YOK, MÜKEMMEL --- */}
             <Tab.Screen
                 name="Akış"
                 component={HomeScreen}
@@ -69,11 +59,11 @@ const BottomTabNavigator = () => {
                 }}
             />
             <Tab.Screen
-                name="Buluşmalar"
-                component={MeetingsScreen}
+                name="Arama"
+                component={SearchScreen}
                 options={{
                     tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "car-sport" : "car-sport-outline"} size={26} color={color} />
+                        <Ionicons name={focused ? "search" : "search-outline"} size={24} color={color} />
                     ),
                 }}
             />
@@ -87,19 +77,23 @@ const BottomTabNavigator = () => {
                 }}
             />
             <Tab.Screen
-                name="Profil"  // Bu isim önemli! 'navigate' içinde bu kullanılır.
-                component={ProfilScreen} // ProfilScreen'i import etmeyi unutma
+                name="Profil"
+                component={ProfilScreen}
                 options={{
                     headerTitle: '',
-
                     tabBarIcon: ({ color, focused }) => (
                         <AntDesign name="user" size={24} color={color} />
                     ),
                 }}
+                // --- listeners kısmında HİÇBİR DEĞİŞİKLİK YOK, MÜKEMMEL ---
+                listeners={({ navigation }) => ({
+                    tabPress: (e) => {
+                        e.preventDefault();
+                        navigation.navigate('Profil', { userId: undefined });
+                    },
+                })}
             />
         </Tab.Navigator>
-
-        
     );
 };
 

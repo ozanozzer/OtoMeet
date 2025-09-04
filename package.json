@@ -23,6 +23,7 @@
     "expo": "~53.0.22",
     "expo-image-picker": "~16.1.4",
     "expo-status-bar": "~2.2.3",
+    "lodash.debounce": "^4.0.8",
     "lottie-react-native": "^7.3.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",

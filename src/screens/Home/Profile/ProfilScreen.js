@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 // Menu ve IconButton import edildi
 import { Avatar, Text, Button, ActivityIndicator, Divider, Title, Paragraph, IconButton } from 'react-native-paper'; 
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { supabase } from '../../../services/supabase';
 import colors from '../../../constants/colors';// TEMİZLENMİŞ KODU BURADAN KOPYALA
 
@@ -24,6 +24,9 @@ const PostItem = ({ post }) => (
 );
 
 const ProfilScreen = () => {
+    const route = useRoute();
+    const userId = route.params?.userId;
+
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
 
@@ -33,41 +36,43 @@ const ProfilScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
 
 
-    const fetchProfile = async () => {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) throw new Error("Kullanıcı bulunamadı.");
+const fetchProfile = useCallback(async () => {
+    try {
+        const userToFetchId = userId || (await supabase.auth.getUser()).data.user?.id;
+        if (!userToFetchId) throw new Error("Kullanıcı ID bulunamadı.");
 
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select(`username, full_name, avatar_url, biography`)
-                    .eq('id', user.id)
-                    .single();
+        const { data, error } = await supabase
+            .from('profiles')
+            .select(`id, username, full_name, avatar_url, biography`)
+            .eq('id', userToFetchId)
+            .single();
 
-                if (error) throw error;
-                if (data) setProfile(data);
+        if (error) {
+            if (error.code === 'PGRST116') setProfile(null);
+            else throw error;
+        }
+        if (data) setProfile(data);
+    } catch (error) {
+        Alert.alert('Hata', 'Profil bilgileri yüklenemedi: ' + error.message);
+        setProfile(null);
+    } finally {
+        setLoading(false);
+        setRefreshing(false);
+    }
+},  [userId]); // <-- YENİ: fetchProfile artık userId'ye bağımlı.
 
-            } catch (error) {
-                Alert.alert('Hata', 'Profil bilgileri yüklenemedi: ' + error.message);
-            } finally {
-                setLoading(false);
-                setRefreshing(false);
-            }
-        };
-
-    useFocusEffect(
-        useCallback(() => {
-            
-            setLoading(true);
-            fetchProfile();
-
-        }, [])
+        // useFocusEffect artık sadece fetchProfile'ı çağırıyor.
+        useFocusEffect(
+            useCallback(() => {
+                setLoading(true);
+                fetchProfile();
+            }, [fetchProfile]) // <-- YENİ: useFocusEffect de fetchProfile'a bağımlı.
         );
 
-    const onRefresh = useCallback(() => {
-        setRefreshing(true);
-        fetchProfile();
-    }, []);
+        const onRefresh = useCallback(() => {
+            setRefreshing(true);
+            fetchProfile();
+        }, [fetchProfile]);
 
 
     if (loading) {
@@ -82,7 +87,6 @@ const ProfilScreen = () => {
         return (
             <View style={[styles.container, styles.centerContent]}>
                 <Text>Profil Bilgileri Bulunamadı</Text>
-                <Button onPress={handleLogout}>Çıkış Yap</Button>
             </View>
         );
     }
