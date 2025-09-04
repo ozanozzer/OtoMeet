@@ -1,61 +1,106 @@
 // src/screens/Messages/MesajlarScreen.js
 
-import React from 'react';
-// DEĞİŞİKLİK 1: `SafeAreaView` yerine `useSafeAreaInsets` hook'unu import ediyoruz
-import { StyleSheet, ScrollView, View } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { StyleSheet, View, FlatList, Alert } from 'react-native';
+import { ActivityIndicator, Text } from 'react-native-paper';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import colors from '../../constants/colors';
 
+import { supabase } from '../../services/supabase';
+
+import colors from '../../constants/colors';
 import MessagesHeader from '../../components/messages/MessagesHeader';
 import SearchBar from '../../components/messages/SearchBar';
 import ChatItem from '../../components/messages/ChatItem';
 
 const MesajlarScreen = () => {
-    // DEĞİŞİKLİK 2: Hook'u kullanarak güvenli alan boşluklarını alıyoruz
     const insets = useSafeAreaInsets();
+    const navigation = useNavigation(); // Navigasyon eklendi
 
-    const chatData = [
-        {
-            id: 'chat_1',
-            user: {
-                id: 'user_2',
-                name: 'can_sahin',
-                avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
-                isOnline: true,
-            },
-            lastMessage: {
-                text: 'Dostum yarınki buluşma saat kaçtaydı? Konumu da atarsan süper olur.',
-                timestamp: '15:42',
-                isRead: false,
-            }
-        },
-        {
-            id: 'chat_2',
-            user: {
-                id: 'user_3',
-                name: 'aylin_garage',
-                avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704e',
-                isOnline: false,
-            },
-            lastMessage: {
-                text: 'Harika, teşekkürler!',
-                timestamp: 'Dün',
-                isRead: true,
-            }
-        },
-    ];
+    // --- YENİ EKLENEN STATE'LER ---
+    const [loading, setLoading] = useState(true);
+    const [conversations, setConversations] = useState([]);
+
+    // --- YENİ EKLENEN VERİ ÇEKME FONKSİYONU ---
+    const fetchConversations = async () => {
+        try {
+            const { data, error } = await supabase.rpc('get_conversations_for_user');
+            if (error) throw error;
+            setConversations(data || []);
+        } catch (error) {
+            Alert.alert("Hata", "Sohbetler yüklenirken bir sorun oluştu.");
+            console.error("Sohbet yükleme hatası: ", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // --- YENİ EKLENEN useFocusEffect ---
+    useFocusEffect(
+        useCallback(() => {
+            setLoading(true);
+            fetchConversations();
+        }, [])
+    );
+
+    // --- YENİ EKLENEN YÜKLENİYOR DURUMU ---
+    if (loading) {
+        return (
+            <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
+                <MessagesHeader />
+                <SearchBar />
+                <ActivityIndicator style={{ marginTop: 50 }} color={colors.accent} size="large" />
+            </View>
+        );
+    }
 
     return (
-        // DEĞİŞİKLİK 3: `SafeAreaView` yerine normal `View` kullanıyoruz
-        // ve içine manuel olarak üstten boşluk (paddingTop) veriyoruz.
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <MessagesHeader />
             <SearchBar />
-            <ScrollView contentContainerStyle={styles.listContainer}>
-                {chatData.map((chat) => (
-                    <ChatItem key={chat.id} chat={chat} />
-                ))}
-            </ScrollView>
+
+            {/* --- YENİ EKLENEN FLATLIST VE BOŞ DURUMU KONTROLÜ --- */}
+            {conversations.length === 0 ? (
+                <View style={styles.centerContent}>
+                    <Text>Henüz bir sohbetin yok.</Text>
+                </View>
+            ) : (
+                // ESKİ ScrollView yerine FlatList kullanıyoruz, daha performanslı
+                <FlatList
+                    data={conversations}
+                    keyExtractor={(item) => item.conversation_id.toString()}
+                    contentContainerStyle={styles.listContainer}
+                    renderItem={({ item }) => {
+                        // Supabase'den gelen veriyi senin ChatItem component'inin beklediği formata çeviriyoruz
+                        const chatItemProps = {
+                            id: item.conversation_id,
+                            user: {
+                                id: item.other_user_id,
+                                name: item.other_user_full_name || item.other_user_username,
+                                avatar: item.other_user_avatar_url,
+                                isOnline: true, // Şimdilik statik, ileride eklenebilir
+                            },
+                            lastMessage: {
+                                text: item.last_message_content || 'Henüz mesaj yok.',
+                                timestamp: item.last_message_created_at, // Bunu ChatItem'da formatlaman gerekecek
+                                isRead: true, // Şimdilik statik
+                            }
+                        };
+
+                        return (
+                            <ChatItem 
+                                chat={chatItemProps} 
+                                // Tıklandığında ChatScreen'e yönlendirme
+                                onPress={() => navigation.navigate('ChatScreen', { 
+                                    conversationId: item.conversation_id,
+                                    otherUserName: chatItemProps.user.name,
+                                    otherUserAvatar: chatItemProps.user.avatar
+                                })}
+                            />
+                        );
+                    }}
+                />
+            )}
         </View>
     );
 };
@@ -63,10 +108,16 @@ const MesajlarScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.surface, // Arka planın tamamı beyaz olsun
+        backgroundColor: colors.surface,
     },
     listContainer: {
-        paddingBottom: 100, // Navigasyon barı için boşluk
+        paddingBottom: 100,
+    },
+    // YENİ EKLENEN STİL
+    centerContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
 

@@ -19,7 +19,9 @@
     "@react-navigation/stack": "^7.4.8",
     "@supabase/supabase-js": "^2.57.0",
     "axios": "^1.11.0",
+    "date-fns": "^4.1.0",
     "expo": "~53.0.22",
+    "expo-image-picker": "~16.1.4",
     "expo-status-bar": "~2.2.3",
     "lottie-react-native": "^7.3.3",
     "react": "19.0.0",
@@ -32,8 +34,7 @@
     "react-native-screens": "~4.11.1",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.20.0",
-    "text-encoding": "^0.7.0",
-    "expo-image-picker": "~16.1.4"
+    "text-encoding": "^0.7.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

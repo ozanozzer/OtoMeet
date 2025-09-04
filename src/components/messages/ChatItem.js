@@ -1,12 +1,32 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import colors from '../../constants/colors';
+import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 
-const ChatItem = ({ chat }) => (
-    <TouchableOpacity style={styles.container}>
+// YENİ EKLENEN YARDIMCI FONKSİYON
+const formatTimestamp = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    if (isToday(date)) {
+        return format(date, 'HH:mm'); // Bugün ise: "15:42"
+    }
+    if (isYesterday(date)) {
+        return 'Dün'; // Dün ise: "Dün"
+    }
+    return format(date, 'dd.MM.yyyy'); // Daha eski ise: "05.09.2025"
+};
+
+// 'chat'in yanına 'onPress' de prop olarak eklendi
+const ChatItem = ({ chat, onPress }) => (
+    // TouchableOpacity'ye onPress olayı bağlandı
+    <TouchableOpacity style={styles.container} onPress={onPress}>
         <View style={styles.avatarContainer}>
-            <Image source={{ uri: chat.user.avatar }} style={styles.avatar} />
-            {/* Supabase'den kullanıcının online durumunu alıp gösterebilirsin */}
+            {/* YENİ: Avatar URL'i yoksa varsayılan bir resim göster */}
+            <Image 
+                source={{ uri: chat.user.avatar || 'https://via.placeholder.com/150' }} 
+                style={styles.avatar} 
+            />
             {chat.user.isOnline && <View style={styles.onlineIndicator} />}
         </View>
 
@@ -21,8 +41,10 @@ const ChatItem = ({ chat }) => (
         </View>
 
         <View style={styles.infoContainer}>
-            <Text style={styles.timestamp}>{chat.lastMessage.timestamp}</Text>
-            {/* Eğer mesaj okunmadıysa mavi bir nokta göster */}
+            {/* YENİ: Tarih formatlama fonksiyonu kullanıldı */}
+            <Text style={styles.timestamp}>
+                {formatTimestamp(chat.lastMessage.timestamp)}
+            </Text>
             {!chat.lastMessage.isRead && <View style={styles.unreadDot} />}
         </View>
     </TouchableOpacity>
