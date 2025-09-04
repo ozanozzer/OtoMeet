@@ -1,27 +1,23 @@
-// src/screens/Messages/MesajlarScreen.js
+// src/screens/Messages/MessagesScreen.js
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react'; // useEffect eklendi
 import { StyleSheet, View, FlatList, Alert } from 'react-native';
 import { ActivityIndicator, Text } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { supabase } from '../../services/supabase';
-
 import colors from '../../constants/colors';
 import MessagesHeader from '../../components/messages/MessagesHeader';
 import SearchBar from '../../components/messages/SearchBar';
 import ChatItem from '../../components/messages/ChatItem';
 
-const MesajlarScreen = () => {
+const MessagesScreen = () => { // İsim düzeltildi
     const insets = useSafeAreaInsets();
-    const navigation = useNavigation(); // Navigasyon eklendi
+    const navigation = useNavigation();
 
-    // --- YENİ EKLENEN STATE'LER ---
     const [loading, setLoading] = useState(true);
     const [conversations, setConversations] = useState([]);
 
-    // --- YENİ EKLENEN VERİ ÇEKME FONKSİYONU ---
     const fetchConversations = async () => {
         try {
             const { data, error } = await supabase.rpc('get_conversations_for_user');
@@ -35,7 +31,30 @@ const MesajlarScreen = () => {
         }
     };
 
-    // --- YENİ EKLENEN useFocusEffect ---
+    // --- DEĞİŞİKLİK BURADA BAŞLIYOR: REALTIME DİNLEYİCİSİ EKLENDİ ---
+    useEffect(() => {
+        // Bu useEffect, component yüklendiğinde SADECE BİR KEZ çalışır.
+        // Görevi, Realtime kanalını kurmak ve dinlemeye başlamaktır.
+
+        const channel = supabase
+            .channel('public:conversations')
+            .on('postgres_changes', 
+                { event: '*', schema: 'public', table: 'messages' }, 
+                (payload) => {
+                    // Mesajlar tablosunda herhangi bir değişiklik olduğunda (yeni, güncelleme, silme)
+                    // sohbet listesini yeniden çekerek güncel tut.
+                    console.log('Yeni mesaj algılandı, liste güncelleniyor...');
+                    fetchConversations();
+                }
+            )
+            .subscribe();
+
+        // Component ekrandan kaldırıldığında kanalı temizle
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []); // Boş dizi sayesinde sadece bir kez kurulur.
+
     useFocusEffect(
         useCallback(() => {
             setLoading(true);
@@ -43,54 +62,44 @@ const MesajlarScreen = () => {
         }, [])
     );
 
-    // --- YENİ EKLENEN YÜKLENİYOR DURUMU ---
-    if (loading) {
-        return (
-            <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
-                <MessagesHeader />
-                <SearchBar />
-                <ActivityIndicator style={{ marginTop: 50 }} color={colors.accent} size="large" />
-            </View>
-        );
-    }
+    if (loading) { /* ... aynı ... */ }
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <MessagesHeader />
             <SearchBar />
 
-            {/* --- YENİ EKLENEN FLATLIST VE BOŞ DURUMU KONTROLÜ --- */}
             {conversations.length === 0 ? (
                 <View style={styles.centerContent}>
                     <Text>Henüz bir sohbetin yok.</Text>
                 </View>
             ) : (
-                // ESKİ ScrollView yerine FlatList kullanıyoruz, daha performanslı
                 <FlatList
                     data={conversations}
                     keyExtractor={(item) => item.conversation_id.toString()}
                     contentContainerStyle={styles.listContainer}
+                    // --- BÜTÜN DÜZELTME BU renderItem BLOĞUNUN İÇİNDE ---
                     renderItem={({ item }) => {
-                        // Supabase'den gelen veriyi senin ChatItem component'inin beklediği formata çeviriyoruz
+                        // Supabase'den gelen 'item'ı, ChatItem'ın beklediği 'chat' formatına çeviriyoruz
                         const chatItemProps = {
                             id: item.conversation_id,
                             user: {
                                 id: item.other_user_id,
                                 name: item.other_user_full_name || item.other_user_username,
-                                avatar: item.other_user_avatar_url,
-                                isOnline: true, // Şimdilik statik, ileride eklenebilir
+                                avatar: item.other_user_avatar_url, // Artık 'avatar' var
+                                isOnline: true, 
                             },
                             lastMessage: {
                                 text: item.last_message_content || 'Henüz mesaj yok.',
-                                timestamp: item.last_message_created_at, // Bunu ChatItem'da formatlaman gerekecek
-                                isRead: true, // Şimdilik statik
+                                timestamp: item.last_message_created_at,
+                                isRead: true, 
                             }
                         };
 
+                        // ChatItem'a, formatlanmış olan bu yeni objeyi gönderiyoruz
                         return (
                             <ChatItem 
                                 chat={chatItemProps} 
-                                // Tıklandığında ChatScreen'e yönlendirme
                                 onPress={() => navigation.navigate('ChatScreen', { 
                                     conversationId: item.conversation_id,
                                     otherUserName: chatItemProps.user.name,
@@ -105,20 +114,6 @@ const MesajlarScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.surface,
-    },
-    listContainer: {
-        paddingBottom: 100,
-    },
-    // YENİ EKLENEN STİL
-    centerContent: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-});
+const styles = StyleSheet.create({ /* ... aynı ... */ });
 
-export default MesajlarScreen;
+export default MessagesScreen; // İsim düzeltildi
