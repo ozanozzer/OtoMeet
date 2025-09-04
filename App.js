@@ -11,6 +11,7 @@ import LoginScreen from './src/screens/Auth/LoginScreen';
 import RegisterScreen from './src/screens/Auth/RegisterScreen';
 import SettingsScreen from './src/screens/Home/Profile/SettingsScreen';
 import EditProfileScreen from './src/screens/Home/Profile/EditProfileScreen'; 
+import ChatScreen from './src/screens/Messages/ChatScreen';
 
 const Stack = createStackNavigator();
 
@@ -57,6 +58,11 @@ export default function App() {
             options={{
               cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
             }}
+          />
+
+          <Stack.Screen
+            name='ChatScreen'
+            component={ChatScreen}
           />
           
         </Stack.Navigator>
