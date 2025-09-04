@@ -140,6 +140,30 @@ const ProfilScreen = () => {
         }
     };
 
+    const handleSendMessage = async () => {
+    try {
+        if (!profile?.id) throw new Error("Profil ID bulunamadı.");
+
+        // .single() komutu bize [{...}] yerine {...} şeklinde tek bir obje döndürür.
+        const { data, error } = await supabase.rpc('create_conversation', {
+            other_user_id: profile.id
+        }).single();
+
+        if (error) throw error;
+        
+        // Şimdi, bu objenin içinden sadece ihtiyacımız olan parçaları alıp gönderiyoruz.
+        navigation.navigate('ChatScreen', {
+            conversationId: data.conversation_id, // <-- DÜZELTME 1: Sadece ID'yi gönder
+            otherUserName: data.other_user_name || profile.username,
+            otherUserAvatar: data.other_user_avatar
+        });
+
+    } catch (error) {
+        console.error("SOHBET BAŞLATMA HATASI: ", error);
+        Alert.alert('Hata', 'Sohbet başlatılırken bir sorun oluştu');
+    }
+};
+
     // --- BÜTÜN DEĞİŞİKLİK BURADA BAŞLIYOR (YAPI DEĞİŞİKLİĞİ) ---
 
     if (loading) {
@@ -212,7 +236,7 @@ const ProfilScreen = () => {
             </View>
             
             {!isMyProfile && (
-                <View style={styles.buttonContainer}>
+                <View style={[styles.buttonContainer, { flexDirection: 'row'}]}>
                     {isFollowing ? (
                         <Button mode="outlined" onPress={handleUnfollow} style={styles.unfollowButton} labelStyle={{color: colors.textSecondary}} loading={isFollowLoading} disabled={isFollowLoading}>
                             Takibi Bırak
@@ -222,6 +246,14 @@ const ProfilScreen = () => {
                             Takip Et
                         </Button>
                     )}
+
+                    <Button
+                        mode="outlined"
+                        onPress={() => handleSendMessage(profile.id)} // Fonksiyon arrow function ile sarmalandı
+                        style={[styles.button, styles.messageButton]}
+                        icon="message-text-outline">
+                            Mesaj
+                    </Button>
                 </View>
             )}
 
@@ -286,9 +318,17 @@ const styles = StyleSheet.create({
     buttonContainer: {
         marginTop: 16,
     },
+    button:{
+        flex:1,
+    },
     unfollowButton: {
         borderColor: colors.border,
+        marginRight: 8,
     },
+    messageButton:{
+        borderColor: colors.border,
+        marginLeft: 8,
+    }
 });
 
 export default ProfilScreen;
