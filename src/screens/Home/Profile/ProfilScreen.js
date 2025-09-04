@@ -174,9 +174,35 @@ const ProfilScreen = () => {
                     source={{ uri: profile.avatar_url || 'https://via.placeholder.com/150' }} 
                 />
                 <View style={styles.statsContainer}>
-                    <View style={styles.statItem}><Text style={styles.statNumber}>{userPosts.length}</Text><Text>Gönderi</Text></View>
-                    <View style={styles.statItem}><Text style={styles.statNumber}>{followerCount}</Text><Text>Takipçi</Text></View>
-                    <View style={styles.statItem}><Text style={styles.statNumber}>{followingCount}</Text><Text>Takip</Text></View>
+                    {/* 1. Gönderi - Tıklanamaz */}
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNumber}>{userPosts.length}</Text>
+                        <Text>Gönderi</Text>
+                    </View>
+
+                    {/* 2. Takipçiler - Tıklanabilir */}
+                    <TouchableOpacity 
+                        style={styles.statItem} 
+                        onPress={() => navigation.navigate('Followers', { 
+                            profileId: profile.id,
+                            screenTitle: 'Takipçiler'
+                        })}
+                    >
+                        <Text style={styles.statNumber}>{followerCount}</Text>
+                        <Text>Takipçi</Text>
+                    </TouchableOpacity>
+
+                    {/* 3. Takip Edilenler - Tıklanabilir */}
+                    <TouchableOpacity 
+                        style={styles.statItem} 
+                        onPress={() => navigation.navigate('Following', { 
+                            profileId: profile.id,
+                            screenTitle: 'Takip Edilenler'
+                        })}
+                    >
+                        <Text style={styles.statNumber}>{followingCount}</Text>
+                        <Text>Takip</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
             <View style={styles.bioContainer}>

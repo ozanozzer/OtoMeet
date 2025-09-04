@@ -12,6 +12,8 @@ import RegisterScreen from './src/screens/Auth/RegisterScreen';
 import SettingsScreen from './src/screens/Home/Profile/SettingsScreen';
 import EditProfileScreen from './src/screens/Home/Profile/EditProfileScreen'; 
 import ChatScreen from './src/screens/Messages/ChatScreen';
+import FollowersScreen from './src/screens/Home/Profile/FollowersScreen';
+import FollowingScreen from './src/screens/Home/Profile/FollowingScreen';
 
 const Stack = createStackNavigator();
 
@@ -64,6 +66,9 @@ export default function App() {
             name='ChatScreen'
             component={ChatScreen}
           />
+
+          <Stack.Screen name="Followers" component={FollowersScreen} />
+          <Stack.Screen name="Following" component={FollowingScreen} />
           
         </Stack.Navigator>
       </NavigationContainer>
