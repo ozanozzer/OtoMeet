@@ -1,24 +1,28 @@
 // src/screens/Profile/EditProfileScreen.js
 
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, ScrollView } from 'react-native';
-import { Appbar, TextInput, Button, Avatar, ActivityIndicator, HelperText } from 'react-native-paper';
+import { View, StyleSheet, Alert, ScrollView, Platform, TouchableOpacity } from 'react-native';
+// YENİ: Icon bileşeni Paper'dan import edildi
+import { Appbar, TextInput, Button, Avatar, ActivityIndicator, HelperText, Icon } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../../services/supabase';
 import colors from '../../../constants/colors';
+import * as ImagePicker from 'expo-image-picker';
+// FA5Style import'u kaldırıldı, kullanılmıyordu.
 
 const EditProfileScreen = () => {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
-    // Form alanları için state'ler
+    // Form alanları için state'ler (değişiklik yok)
     const [username, setUsername] = useState('');
     const [fullName, setFullName] = useState('');
     const [biography, setBiography] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
 
-    // Ekran ilk açıldığında mevcut profil bilgilerini çek
+    // Ekran ilk açıldığında mevcut profil bilgilerini çek (değişiklik yok)
     useEffect(() => {
         const getProfile = async () => {
             try {
@@ -48,58 +52,102 @@ const EditProfileScreen = () => {
         getProfile();
     }, []);
 
+    // Kullanıcı adı temizleme fonksiyonu (değişiklik yok)
     const handleUsernameChange = (text) => {
-        //gelen metni küçük harfe çevirtiyorum
         let cleanedText = text.toLowerCase();
-
-        //boşlukları kaldırtan kısım
         cleanedText = cleanedText.replace(/\s+/g,'');
-
         cleanedText = cleanedText.replace(/[^a-z0-9_]/g, '');
-
         setUsername(cleanedText);
-    }
+    };
 
-    // "Kaydet" butonuna basıldığında çalışacak fonksiyon
-    // EditProfileScreen.js içinde
-
-const handleUpdateProfile = async () => {
-    // Kullanıcı adının boş olup olmadığını kontrol et
-    if (!username.trim()) {
-        Alert.alert("Hata", "Kullanıcı adı boş bırakılamaz.");
-        return;
-    }
-
-    setSaving(true);
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Kullanıcı bulunamadı.");
-
-        const updates = {
-            id: user.id,
-            username: username.trim(), // Boşlukları temizle
-            full_name: fullName.trim(),
-            biography: biography.trim(),
-            avatar_url: avatarUrl,
-            updated_at: new Date(),
-        };
-
-        const { error } = await supabase.from('profiles').upsert(updates);
-        
-        // YENİ VE AKILLI HATA KONTROLÜ
-        if (error) {
-            // Eğer hata "duplicate key" (zaten var olan anahtar) hatasıysa,
-            // bunun sebebi %99 ihtimalle kullanıcı adının başkası tarafından alınmış olmasıdır.
-            if (error.message.includes('duplicate key value violates unique constraint')) {
-                Alert.alert("Hata", "Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane deneyin.");
-            } else {
-                // Diğer tüm hatalar için genel mesaj
-                throw error;
+    // Fotoğraf seçme ve yükleme fonksiyonu (hataları düzeltildi)
+    const pickImage = async () => {
+        setUploading(true);
+        try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted'){
+                Alert.alert('İzin Gerekli', 'Üzgünüz, fotoğraf yükleyebilmeniz için iznine ihtiyacımız var.');
+                setUploading(false); // İzin verilmezse yüklemeyi bitir
+                return;
             }
-        } else {
-            Alert.alert("Başarılı", "Profilin güncellendi!");
-            navigation.goBack();
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.5,
+            });
+
+            if (result.canceled) {
+                setUploading(false); // İptal edilirse yüklemeyi bitir
+                return;
+            }
+
+            const image = result.assets[0];
+            const fileExt = image.uri.split('.').pop();
+            // DÜZELTME: Doğru tırnak (`) ve büyük 'D' kullanıldı
+            const fileName = `${Date.now()}.${fileExt}`;
+            const filePath = fileName;
+
+            const formData = new FormData();
+            formData.append('file',{
+                uri: image.uri,
+                name: fileName,
+                // DÜZELTME: Doğru tırnak (`) kullanıldı
+                type: `image/${fileExt}`
+            });
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, formData);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+            if (data && data.publicUrl) {
+                setAvatarUrl(data.publicUrl);
+            }
+
+        } catch (error) {
+            Alert.alert("Fotoğraf yüklenemedi", error.message);
+        } finally {
+            setUploading(false);
         }
+    };
+
+    // Kaydetme fonksiyonu (değişiklik yok)
+    const handleUpdateProfile = async () => {
+        if (!username.trim()) {
+            Alert.alert("Hata", "Kullanıcı adı boş bırakılamaz.");
+            return;
+        }
+        setSaving(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Kullanıcı bulunamadı.");
+
+            const updates = {
+                id: user.id,
+                username: username.trim(),
+                full_name: fullName.trim(),
+                biography: biography.trim(),
+                avatar_url: avatarUrl,
+                updated_at: new Date(),
+            };
+
+            const { error } = await supabase.from('profiles').upsert(updates);
+            
+            if (error) {
+                if (error.message.includes('duplicate key value violates unique constraint')) {
+                    Alert.alert("Hata", "Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane deneyin.");
+                } else {
+                    throw error;
+                }
+            } else {
+                Alert.alert("Başarılı", "Profilin güncellendi!");
+                navigation.goBack();
+            }
 
         } catch (error) {
             Alert.alert("Hata", "Profil güncellenirken bir sorun oluştu.");
@@ -117,17 +165,29 @@ const handleUpdateProfile = async () => {
             <Appbar.Header style={styles.header}>
                 <Appbar.BackAction onPress={() => navigation.goBack()} color={colors.text} />
                 <Appbar.Content title="Profili Düzenle" titleStyle={styles.title} />
-                <Button onPress={handleUpdateProfile} textColor={colors.accent} disabled={saving} loading={saving}>
+                <Button onPress={handleUpdateProfile} textColor={colors.accent} disabled={saving || uploading} loading={saving}>
                     Kaydet
                 </Button>
             </Appbar.Header>
 
             <ScrollView contentContainerStyle={styles.content}>
-                <Avatar.Image 
-                    size={120} 
-                    source={{ uri: avatarUrl || 'https://via.placeholder.com/150' }} 
-                    style={styles.avatar}
-                />
+                
+                {/* DÜZELTME: Eksik '=' eklendi */}
+                <TouchableOpacity onPress={pickImage} disabled={uploading} style={styles.avatarContainer}>
+                    <Avatar.Image 
+                        size={120} 
+                        source={{ uri: avatarUrl || 'https://via.placeholder.com/150' }} 
+                        // style prop'u gereksiz, container'dan geliyor
+                    />
+                    <View style={styles.avatarOverlay}>
+                        {uploading ? (
+                            <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                            // DÜZELTME: Icon bileşeni doğru kullanıldı
+                            <Icon source="camera" size={32} color="#fff" />
+                        )}
+                    </View>
+                </TouchableOpacity>
                 
                 <TextInput
                     label="Kullanıcı Adı"
@@ -162,12 +222,28 @@ const handleUpdateProfile = async () => {
     );
 };
 
+// Stillerin neredeyse aynı, sadece avatar'daki gereksiz stil kaldırıldı
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: { backgroundColor: colors.surface },
     title: { fontWeight: 'bold' },
     content: { padding: 20, alignItems: 'center' },
-    avatar: { marginBottom: 20 },
+    avatarContainer: { 
+        position: 'relative',
+        marginBottom: 20,
+        borderRadius: 60,
+        overflow: 'hidden',
+    },
+    avatarOverlay:{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     input: { width: '100%', marginTop: 10 },
 });
 
