@@ -1,15 +1,13 @@
-// src/screens/Profile/ProfilScreen.js
+// src/screens/Home/Profile/ProfilScreen.js
 
-// 1. ADIM: Gerekli bileşenler import listesine eklendi
 import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, FlatList, Dimensions, Image, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-// Menu ve IconButton import edildi
-import { Avatar, Text, Button, ActivityIndicator, Divider, Title, Paragraph, IconButton } from 'react-native-paper'; 
+import { Avatar, Text, Button, ActivityIndicator, Divider, Title, Paragraph, IconButton } from 'react-native-paper';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { supabase } from '../../../services/supabase';
-import colors from '../../../constants/colors';// TEMİZLENMİŞ KODU BURADAN KOPYALA
+import colors from '../../../constants/colors';
 
 const { width } = Dimensions.get('window');
 const postSize = width / 3;
@@ -32,48 +30,116 @@ const ProfilScreen = () => {
 
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState(null);
-
     const [refreshing, setRefreshing] = useState(false);
+    
+    const [isMyProfile, setIsMyProfile] = useState(false);
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followerCount, setFollowerCount] = useState(0);
+    const [followingCount, setFollowingCount] = useState(0);
 
+    const fetchProfile = useCallback(async () => {
+        try {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            const userToFetchId = userId || currentUser?.id;
 
-const fetchProfile = useCallback(async () => {
-    try {
-        const userToFetchId = userId || (await supabase.auth.getUser()).data.user?.id;
-        if (!userToFetchId) throw new Error("Kullanıcı ID bulunamadı.");
+            if (!userToFetchId) throw new Error("Kullanıcı ID bulunamadı.");
 
-        const { data, error } = await supabase
-            .from('profiles')
-            .select(`id, username, full_name, avatar_url, biography`)
-            .eq('id', userToFetchId)
-            .single();
+            setIsMyProfile(userToFetchId === currentUser?.id);
 
-        if (error) {
-            if (error.code === 'PGRST116') setProfile(null);
-            else throw error;
+            const { data, error } = await supabase
+                .from('profiles')
+                .select(`id, username, full_name, avatar_url, biography`)
+                .eq('id', userToFetchId)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') setProfile(null);
+                else throw error;
+            } else {
+                setProfile(data);
+            }
+
+            const { count: followers } = await supabase
+                .from('followers')
+                .select('*', { count: 'exact', head: true })
+                .eq('following_id', userToFetchId);
+            setFollowerCount(followers || 0);
+
+            const { count: following } = await supabase
+                .from('followers')
+                .select('*', { count: 'exact', head: true })
+                .eq('follower_id', userToFetchId);
+            setFollowingCount(following || 0);
+
+            if (!isMyProfile && currentUser) {
+                const { data: followData, error: followError } = await supabase
+                    .from('followers')
+                    .select('id', { count: 'exact' })
+                    .eq('follower_id', currentUser.id)
+                    .eq('following_id', userToFetchId);
+
+                if (followError) throw followError;
+                setIsFollowing(followData.length > 0);
+            }
+
+        } catch (error) {
+            Alert.alert('Hata', 'Profil bilgileri yüklenemedi: ' + error.message);
+            setProfile(null);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
         }
-        if (data) setProfile(data);
-    } catch (error) {
-        Alert.alert('Hata', 'Profil bilgileri yüklenemedi: ' + error.message);
-        setProfile(null);
-    } finally {
-        setLoading(false);
-        setRefreshing(false);
-    }
-},  [userId]); // <-- YENİ: fetchProfile artık userId'ye bağımlı.
+    }, [userId, isMyProfile]);
 
-        // useFocusEffect artık sadece fetchProfile'ı çağırıyor.
-        useFocusEffect(
-            useCallback(() => {
-                setLoading(true);
-                fetchProfile();
-            }, [fetchProfile]) // <-- YENİ: useFocusEffect de fetchProfile'a bağımlı.
-        );
-
-        const onRefresh = useCallback(() => {
-            setRefreshing(true);
+    useFocusEffect(
+        useCallback(() => {
+            setLoading(true);
             fetchProfile();
-        }, [fetchProfile]);
+        }, [fetchProfile])
+    );
 
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        fetchProfile();
+    }, [fetchProfile]);
+
+    const handleFollow = async () => {
+        if (!profile || isFollowing) return;
+        setLoading(true);
+        try {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            await supabase.from('followers').insert({
+                follower_id: currentUser.id,
+                following_id: profile.id
+            });
+            setIsFollowing(true);
+            setFollowerCount(prev => prev + 1);
+        } catch (error) {
+            Alert.alert("Hata", "Takip etme işlemi başarısız oldu.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUnfollow = async () => {
+        if (!profile || !isFollowing) return;
+        setLoading(true);
+        try {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            await supabase.from('followers')
+                .delete()
+                .eq('follower_id', currentUser.id)
+                .eq('following_id', profile.id);
+            setIsFollowing(false);
+            setFollowerCount(prev => prev - 1);
+        } catch (error) {
+            Alert.alert("Hata", "Takibi bırakma işlemi başarısız oldu.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // --- BÜTÜN DEĞİŞİKLİK BURADA BAŞLIYOR (YAPI DEĞİŞİKLİĞİ) ---
 
     if (loading) {
         return (
@@ -91,6 +157,8 @@ const fetchProfile = useCallback(async () => {
         );
     }
 
+    // Artık 'profile' dolu olduğundan eminiz, şimdi ekranı çizebiliriz.
+    
     const userPosts = [
         { id: '1', image: 'https://i0.shbdn.com/photos/19/23/19/x5_1256192319ogz.jpg', type: 'image' },
         { id: '2', image: 'https://images.unsplash.com/photo-1617886322207-6f504e7472c5?w=500&q=80', type: 'image' },
@@ -105,9 +173,9 @@ const fetchProfile = useCallback(async () => {
                     source={{ uri: profile.avatar_url || 'https://via.placeholder.com/150' }} 
                 />
                 <View style={styles.statsContainer}>
-                    <View style={styles.statItem}><Text style={styles.statNumber}>125</Text><Text>Gönderi</Text></View>
-                    <View style={styles.statItem}><Text style={styles.statNumber}>12.5k</Text><Text>Takipçi</Text></View>
-                    <View style={styles.statItem}><Text style={styles.statNumber}>320</Text><Text>Takip</Text></View>
+                    <View style={styles.statItem}><Text style={styles.statNumber}>{userPosts.length}</Text><Text>Gönderi</Text></View>
+                    <View style={styles.statItem}><Text style={styles.statNumber}>{followerCount}</Text><Text>Takipçi</Text></View>
+                    <View style={styles.statItem}><Text style={styles.statNumber}>{followingCount}</Text><Text>Takip</Text></View>
                 </View>
             </View>
             <View style={styles.bioContainer}>
@@ -115,6 +183,21 @@ const fetchProfile = useCallback(async () => {
                 <Paragraph style={styles.username}>@{profile.username}</Paragraph>
                 <Paragraph style={styles.bio}>{profile.biography || 'Henüz bir biyografi eklenmemiş.'}</Paragraph>
             </View>
+            
+            {!isMyProfile && (
+                <View style={styles.buttonContainer}>
+                    {isFollowing ? (
+                        <Button mode="outlined" onPress={handleUnfollow} style={styles.unfollowButton} labelStyle={{color: colors.textSecondary}}>
+                            Takibi Bırak
+                        </Button>
+                    ) : (
+                        <Button mode="contained" onPress={handleFollow} buttonColor={colors.accent}>
+                            Takip Et
+                        </Button>
+                    )}
+                </View>
+            )}
+
             <Divider style={styles.divider} />
         </View>
     );
@@ -124,14 +207,16 @@ const fetchProfile = useCallback(async () => {
             <View style={styles.customHeader}>
                 <View style={{width: 50}} />
                 <Title style={styles.headerTitle}>@{profile.username}</Title>
-
-                <IconButton
-                    icon="cog-outline"
-                    iconColor={colors.text}
-                    size={28}
-                    onPress={() => navigation.navigate('Settings')} // Tıklanınca Settings'e git!
-                />
-                
+                {!isMyProfile ? (
+                     <View style={{width: 50}} /> // Başlığı ortalamak için boş view
+                ) : (
+                    <IconButton
+                        icon="cog-outline"
+                        iconColor={colors.text}
+                        size={28}
+                        onPress={() => navigation.navigate('Settings')}
+                    />
+                )}
             </View>
             <FlatList
                 data={userPosts}
@@ -140,7 +225,6 @@ const fetchProfile = useCallback(async () => {
                 numColumns={3}
                 ListHeaderComponent={ListHeader}
                 showsVerticalScrollIndicator={false}
-
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -155,78 +239,28 @@ const fetchProfile = useCallback(async () => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.surface,
-    },
-    customHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 10,
-        backgroundColor: colors.surface,
-    },
-    headerTitle: {
-        fontWeight: 'bold',
-        fontSize: 18,
-    },
-    centerContent: {
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    headerContainer: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
-    },
-    profileInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    statsContainer: {
-        flexDirection: 'row',
-        flex: 1,
-        justifyContent: 'space-around',
-        marginLeft: 10,
-    },
-    statItem: {
-        alignItems: 'center',
-    },
-    statNumber: {
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-    bioContainer: {
-        marginTop: 12,
-    },
-    fullName: {
-        fontWeight: 'bold',
-    },
-    username: {
-        color: colors.textSecondary,
-        marginTop: -5,
-    },
-    bio: {
-        marginTop: 8,
-    },
-    logoutButton: {
+    container: { flex: 1, backgroundColor: colors.surface },
+    customHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10, backgroundColor: colors.surface },
+    headerTitle: { fontWeight: 'bold', fontSize: 18 },
+    centerContent: { justifyContent: 'center', alignItems: 'center' },
+    headerContainer: { paddingHorizontal: 16, paddingTop: 16 },
+    profileInfo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    statsContainer: { flexDirection: 'row', flex: 1, justifyContent: 'space-around', marginLeft: 10 },
+    statItem: { alignItems: 'center' },
+    statNumber: { fontWeight: 'bold', fontSize: 16 },
+    bioContainer: { marginTop: 12 },
+    fullName: { fontWeight: 'bold' },
+    username: { color: colors.textSecondary, marginTop: -5 },
+    bio: { marginTop: 8 },
+    divider: { marginTop: 16 },
+    postItem: { width: postSize, height: postSize },
+    postImage: { width: '100%', height: '100%' },
+    videoIcon: { position: 'absolute', top: 8, right: 8 },
+    buttonContainer: {
         marginTop: 16,
     },
-    divider: {
-        marginTop: 16,
-    },
-    postItem: {
-        width: postSize,
-        height: postSize,
-    },
-    postImage: {
-        width: '100%',
-        height: '100%',
-    },
-    videoIcon: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
+    unfollowButton: {
+        borderColor: colors.border,
     },
 });
 
