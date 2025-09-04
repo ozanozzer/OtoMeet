@@ -48,27 +48,58 @@ const EditProfileScreen = () => {
         getProfile();
     }, []);
 
+    const handleUsernameChange = (text) => {
+        //gelen metni küçük harfe çevirtiyorum
+        let cleanedText = text.toLowerCase();
+
+        //boşlukları kaldırtan kısım
+        cleanedText = cleanedText.replace(/\s+/g,'');
+
+        cleanedText = cleanedText.replace(/[^a-z0-9_]/g, '');
+
+        setUsername(cleanedText);
+    }
+
     // "Kaydet" butonuna basıldığında çalışacak fonksiyon
-    const handleUpdateProfile = async () => {
-        setSaving(true);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("Kullanıcı bulunamadı.");
+    // EditProfileScreen.js içinde
 
-            const updates = {
-                id: user.id,
-                full_name: fullName,
-                biography: biography,
-                avatar_url: avatarUrl,
-                updated_at: new Date(),
-            };
+const handleUpdateProfile = async () => {
+    // Kullanıcı adının boş olup olmadığını kontrol et
+    if (!username.trim()) {
+        Alert.alert("Hata", "Kullanıcı adı boş bırakılamaz.");
+        return;
+    }
 
-            const { error } = await supabase.from('profiles').upsert(updates);
-            
-            if (error) throw error;
-            
+    setSaving(true);
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Kullanıcı bulunamadı.");
+
+        const updates = {
+            id: user.id,
+            username: username.trim(), // Boşlukları temizle
+            full_name: fullName.trim(),
+            biography: biography.trim(),
+            avatar_url: avatarUrl,
+            updated_at: new Date(),
+        };
+
+        const { error } = await supabase.from('profiles').upsert(updates);
+        
+        // YENİ VE AKILLI HATA KONTROLÜ
+        if (error) {
+            // Eğer hata "duplicate key" (zaten var olan anahtar) hatasıysa,
+            // bunun sebebi %99 ihtimalle kullanıcı adının başkası tarafından alınmış olmasıdır.
+            if (error.message.includes('duplicate key value violates unique constraint')) {
+                Alert.alert("Hata", "Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane deneyin.");
+            } else {
+                // Diğer tüm hatalar için genel mesaj
+                throw error;
+            }
+        } else {
             Alert.alert("Başarılı", "Profilin güncellendi!");
-            navigation.goBack(); // Bir önceki ekrana (SettingsScreen) geri dön
+            navigation.goBack();
+        }
 
         } catch (error) {
             Alert.alert("Hata", "Profil güncellenirken bir sorun oluştu.");
@@ -101,11 +132,14 @@ const EditProfileScreen = () => {
                 <TextInput
                     label="Kullanıcı Adı"
                     value={username}
-                    disabled // Kullanıcı adları genellikle değiştirilemez
+                    onChangeText={handleUsernameChange}
                     style={styles.input}
                     mode="outlined"
+                    autoCapitalize='none'
                 />
-                <HelperText type="info">Kullanıcı adları değiştirilemez.</HelperText>
+                <HelperText type='info'>
+                    Sadece küçük harf, rakam ve _ kullanabilirsiniz
+                </HelperText>
 
                 <TextInput
                     label="Tam Adınız"

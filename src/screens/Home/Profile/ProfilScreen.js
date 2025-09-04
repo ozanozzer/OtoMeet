@@ -1,13 +1,13 @@
 // src/screens/Profile/ProfilScreen.js
 
 // 1. ADIM: Gerekli bileşenler import listesine eklendi
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, FlatList, Dimensions, Image, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, View, FlatList, Dimensions, Image, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 // Menu ve IconButton import edildi
 import { Avatar, Text, Button, ActivityIndicator, Divider, Title, Paragraph, IconButton } from 'react-native-paper'; 
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../../services/supabase';
 import colors from '../../../constants/colors';// TEMİZLENMİŞ KODU BURADAN KOPYALA
 
@@ -30,9 +30,10 @@ const ProfilScreen = () => {
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState(null);
 
+    const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        const fetchProfile = async () => {
+
+    const fetchProfile = async () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) throw new Error("Kullanıcı bulunamadı.");
@@ -50,8 +51,21 @@ const ProfilScreen = () => {
                 Alert.alert('Hata', 'Profil bilgileri yüklenemedi: ' + error.message);
             } finally {
                 setLoading(false);
+                setRefreshing(false);
             }
         };
+
+    useFocusEffect(
+        useCallback(() => {
+            
+            setLoading(true);
+            fetchProfile();
+
+        }, [])
+        );
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
         fetchProfile();
     }, []);
 
@@ -122,6 +136,15 @@ const ProfilScreen = () => {
                 numColumns={3}
                 ListHeaderComponent={ListHeader}
                 showsVerticalScrollIndicator={false}
+
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={[colors.accent]}
+                        tintColor={colors.accent}
+                    />
+                }
             />
         </View>
     );
