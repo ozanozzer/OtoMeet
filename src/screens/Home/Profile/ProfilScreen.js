@@ -31,6 +31,7 @@ const ProfilScreen = () => {
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [isFollowLoading, setIsFollowLoading] = useState(false);
     
     const [isMyProfile, setIsMyProfile] = useState(false);
     const [isFollowing, setIsFollowing] = useState(false);
@@ -105,7 +106,7 @@ const ProfilScreen = () => {
 
     const handleFollow = async () => {
         if (!profile || isFollowing) return;
-        setLoading(true);
+        setIsFollowLoading(true);
         try {
             const { data: { user: currentUser } } = await supabase.auth.getUser();
             await supabase.from('followers').insert({
@@ -117,13 +118,13 @@ const ProfilScreen = () => {
         } catch (error) {
             Alert.alert("Hata", "Takip etme işlemi başarısız oldu.");
         } finally {
-            setLoading(false);
+            setIsFollowLoading(false);
         }
     };
 
     const handleUnfollow = async () => {
         if (!profile || !isFollowing) return;
-        setLoading(true);
+        setIsFollowLoading(true);
         try {
             const { data: { user: currentUser } } = await supabase.auth.getUser();
             await supabase.from('followers')
@@ -135,7 +136,7 @@ const ProfilScreen = () => {
         } catch (error) {
             Alert.alert("Hata", "Takibi bırakma işlemi başarısız oldu.");
         } finally {
-            setLoading(false);
+            setIsFollowLoading(false);
         }
     };
 
@@ -187,11 +188,11 @@ const ProfilScreen = () => {
             {!isMyProfile && (
                 <View style={styles.buttonContainer}>
                     {isFollowing ? (
-                        <Button mode="outlined" onPress={handleUnfollow} style={styles.unfollowButton} labelStyle={{color: colors.textSecondary}}>
+                        <Button mode="outlined" onPress={handleUnfollow} style={styles.unfollowButton} labelStyle={{color: colors.textSecondary}} loading={isFollowLoading} disabled={isFollowLoading}>
                             Takibi Bırak
                         </Button>
                     ) : (
-                        <Button mode="contained" onPress={handleFollow} buttonColor={colors.accent}>
+                        <Button mode="contained" onPress={handleFollow} buttonColor={colors.accent} loading={isFollowLoading} disabled={isFollowLoading}>
                             Takip Et
                         </Button>
                     )}
