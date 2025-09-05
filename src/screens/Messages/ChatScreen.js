@@ -24,6 +24,53 @@ const ChatScreen = () => {
     const [newMessage, setNewMessage] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isOtherUserOnline, setIsOtherUserOnline] = useState(false);
+
+
+    useEffect(() => {
+    // Konuştuğumuz kişinin ID'sini route'dan alıyoruz
+    const otherUserId = route.params?.otherUserId; 
+    
+    // Eğer bir şekilde ID gelmediyse, bir şey yapma
+    if (!otherUserId) return;
+
+    console.log(`>>> ${otherUserId} ID'li kullanıcı için online durumu dinleniyor...`);
+
+    const channel = supabase.channel('online-users');
+    
+    channel.on('presence', { event: 'sync' }, () => {
+        // Kanaldaki tüm online kullanıcıların durumunu al
+        const presenceState = channel.presenceState();
+        
+        // --- İŞTE DÜZELTME BURADA ---
+        // 'presenceState' objesinin anahtarları (key'leri) online olan kullanıcıların ID'leridir.
+        // Bizim konuştuğumuz kişinin ID'si bu anahtarların içinde var mı?
+        const isUserOnline = presenceState[otherUserId];
+
+        // 'isUserOnline' undefined değilse (yani listede varsa), kullanıcı online'dır.
+        setIsOtherUserOnline(!!isUserOnline); 
+        
+        console.log(`>>> ${otherUserName} online mı?`, !!isUserOnline);
+    });
+
+    channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+            // Kanala abone olduğumuzda, kendi durumumuzu da takip edelim ki
+            // karşı taraf bizi online görebilsin. Bu App.js'te zaten yapılıyor
+            // ama burada da yapmak garantidir.
+            const currentUserKey = supabase.auth.session()?.user.id;
+            if(currentUserKey) {
+                channel.track({ online_at: new Date().toISOString() });
+            }
+        }
+    });
+
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [route.params?.otherUserId]);
+
 
     // Geçmiş mesajları çek
     useEffect(() => {
@@ -85,7 +132,13 @@ const ChatScreen = () => {
         <View style={styles.container}>
             <Appbar.Header style={styles.header}>
                 <Appbar.BackAction onPress={() => navigation.goBack()} color={colors.text} />
-                <Appbar.Content title={otherUserName} titleStyle={styles.title} />
+                {/* YENİ: Başlığa online durumunu ekle */}
+                <Appbar.Content 
+                    title={otherUserName} 
+                    titleStyle={styles.title}
+                    subtitle={isOtherUserOnline ? 'Çevrimiçi' : 'Çevrimdışı'}
+                    subtitleStyle={[styles.subtitle, { color: isOtherUserOnline ? '#2ecc71' : colors.textSecondary }]}
+                />
             </Appbar.Header>
 
             <KeyboardAvoidingView
@@ -129,6 +182,9 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: { backgroundColor: colors.surface },
     title: { fontWeight: 'bold' },
+    subtitle: {
+        fontSize: 12,
+    },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',

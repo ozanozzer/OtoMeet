@@ -1,6 +1,6 @@
 // src/screens/Messages/MessagesScreen.js
 
-import React, { useState, useCallback, useEffect } from 'react'; // useEffect eklendi
+import React, { useState, useCallback, useEffect } from 'react';
 import { StyleSheet, View, FlatList, Alert } from 'react-native';
 import { ActivityIndicator, Text } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -11,12 +11,16 @@ import MessagesHeader from '../../components/messages/MessagesHeader';
 import SearchBar from '../../components/messages/SearchBar';
 import ChatItem from '../../components/messages/ChatItem';
 
-const MessagesScreen = () => { // İsim düzeltildi
+const MessagesScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation();
 
     const [loading, setLoading] = useState(true);
     const [conversations, setConversations] = useState([]);
+    
+    // --- YENİ EKLENEN STATE ---
+    // Online olan kullanıcıların ID'lerini bir Set içinde tutacağız.
+    const [onlineUserIds, setOnlineUserIds] = useState(new Set());
 
     const fetchConversations = async () => {
         try {
@@ -31,27 +35,39 @@ const MessagesScreen = () => { // İsim düzeltildi
         }
     };
 
-    // --- DEĞİŞİKLİK BURADA BAŞLIYOR: REALTIME DİNLEYİCİSİ EKLENDİ ---
+    // Bu useEffect mesajlardaki değişiklikleri dinler (değişiklik yok)
     useEffect(() => {
-        // Bu useEffect, component yüklendiğinde SADECE BİR KEZ çalışır.
-        // Görevi, Realtime kanalını kurmak ve dinlemeye başlamaktır.
-
-        const channel = supabase
-            .channel('public:conversations')
+        const messageChannel = supabase
+            .channel('public:messages') // Kanal adı daha spesifik olabilir
             .on('postgres_changes', 
                 { event: '*', schema: 'public', table: 'messages' }, 
                 (payload) => {
-                    // Mesajlar tablosunda herhangi bir değişiklik olduğunda (yeni, güncelleme, silme)
-                    // sohbet listesini yeniden çekerek güncel tut.
                     console.log('Yeni mesaj algılandı, liste güncelleniyor...');
                     fetchConversations();
                 }
             )
             .subscribe();
 
-        // Component ekrandan kaldırıldığında kanalı temizle
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(messageChannel);
+        };
+    }, []);
+
+    // --- YENİ EKLENEN useEffect (PRESENCE İÇİN) ---
+    useEffect(() => {
+        // Bu useEffect, online olan kullanıcıları dinler
+        const presenceChannel = supabase.channel('online-users');
+
+        presenceChannel.on('presence', { event: 'sync' }, () => {
+            const presenceState = presenceChannel.presenceState();
+            const onlineUsers = new Set(Object.keys(presenceState));
+            setOnlineUserIds(onlineUsers);
+        });
+
+        presenceChannel.subscribe();
+
+        return () => {
+            supabase.removeChannel(presenceChannel);
         };
     }, []); // Boş dizi sayesinde sadece bir kez kurulur.
 
@@ -62,7 +78,15 @@ const MessagesScreen = () => { // İsim düzeltildi
         }, [])
     );
 
-    if (loading) { /* ... aynı ... */ }
+    if (loading) {
+        return (
+            <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
+                <MessagesHeader />
+                <SearchBar />
+                <ActivityIndicator style={{ marginTop: 50 }} color={colors.accent} size="large" />
+            </View>
+        );
+    }
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -78,16 +102,21 @@ const MessagesScreen = () => { // İsim düzeltildi
                     data={conversations}
                     keyExtractor={(item) => item.conversation_id.toString()}
                     contentContainerStyle={styles.listContainer}
-                    // --- BÜTÜN DÜZELTME BU renderItem BLOĞUNUN İÇİNDE ---
+                    // --- YENİ EKLENEN PROP ---
+                    // onlineUserIds state'i değiştiğinde listeyi yeniden render etmeye zorlar.
+                    extraData={onlineUserIds}
                     renderItem={({ item }) => {
-                        // Supabase'den gelen 'item'ı, ChatItem'ın beklediği 'chat' formatına çeviriyoruz
+                        // --- DEĞİŞİKLİK BURADA ---
+                        // Artık isOnline durumunu canlı olarak onlineUserIds set'inden kontrol ediyoruz.
+                        const isUserOnline = onlineUserIds.has(item.other_user_id);
+
                         const chatItemProps = {
                             id: item.conversation_id,
                             user: {
                                 id: item.other_user_id,
                                 name: item.other_user_full_name || item.other_user_username,
-                                avatar: item.other_user_avatar_url, // Artık 'avatar' var
-                                isOnline: true, 
+                                avatar: item.other_user_avatar_url,
+                                isOnline: isUserOnline, // Artık statik 'false' değil, dinamik!
                             },
                             lastMessage: {
                                 text: item.last_message_content || 'Henüz mesaj yok.',
@@ -96,14 +125,14 @@ const MessagesScreen = () => { // İsim düzeltildi
                             }
                         };
 
-                        // ChatItem'a, formatlanmış olan bu yeni objeyi gönderiyoruz
                         return (
                             <ChatItem 
                                 chat={chatItemProps} 
                                 onPress={() => navigation.navigate('ChatScreen', { 
                                     conversationId: item.conversation_id,
                                     otherUserName: chatItemProps.user.name,
-                                    otherUserAvatar: chatItemProps.user.avatar
+                                    otherUserAvatar: chatItemProps.user.avatar,
+                                    otherUserId: item.other_user_id
                                 })}
                             />
                         );
@@ -114,6 +143,19 @@ const MessagesScreen = () => { // İsim düzeltildi
     );
 };
 
-const styles = StyleSheet.create({ /* ... aynı ... */ });
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: colors.surface,
+    },
+    listContainer: {
+        paddingBottom: 100,
+    },
+    centerContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+});
 
-export default MessagesScreen; // İsim düzeltildi
+export default MessagesScreen;
