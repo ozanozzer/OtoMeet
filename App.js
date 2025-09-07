@@ -15,6 +15,7 @@ import EditProfileScreen from './src/screens/Home/Profile/EditProfileScreen';
 import ChatScreen from './src/screens/Messages/ChatScreen';
 import FollowersScreen from './src/screens/Home/Profile/FollowersScreen';
 import FollowingScreen from './src/screens/Home/Profile/FollowingScreen';
+import CreatePostScreen from './src/screens/Post/CreatePostScreen';
 
 const Stack = createStackNavigator();
 
@@ -70,48 +71,57 @@ export default function App() {
     <PaperProvider>
       <NavigationContainer>
         <Stack.Navigator
-          initialRouteName="Register" // Test için 'HomeScreen' de yapabilirsin
+          initialRouteName="Login" // Test için 'HomeScreen' de yapabilirsin
           screenOptions={{
             headerShown: false,
             animation: 'fade',
           }}
         >
-          <Stack.Screen
-            name="Splash"
-            component={SplashScreen}
-          />
-          <Stack.Screen
-            name="HomeScreen"
-            component={BottomTabNavigator}
-          />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
 
-          <Stack.Screen 
-            name="Settings" 
-            component={SettingsScreen}
-            options={{
-              
-              cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-            }}
-          />
+          <Stack.Group>
+                <Stack.Screen
+                name="Splash"
+                component={SplashScreen}
+              />
+              <Stack.Screen name="HomeScreen">
+                  {/* Stack Navigator'ın kendi 'navigation' prop'unu BottomTabNavigator'a gönderiyoruz */}
+                  {(props) => <BottomTabNavigator {...props} />}
+                </Stack.Screen>
 
-          <Stack.Screen 
-            name="EditProfile" 
-            component={EditProfileScreen}
-            // Bu ekran için de soldan kayma animasyonu güzel durur
-            options={{
-              cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-            }}
-          />
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Register" component={RegisterScreen} />
 
-          <Stack.Screen
-            name='ChatScreen'
-            component={ChatScreen}
-          />
+              <Stack.Screen 
+                name="Settings" 
+                component={SettingsScreen}
+                options={{
+                  
+                  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+                }}
+              />
 
-          <Stack.Screen name="Followers" component={FollowersScreen} />
-          <Stack.Screen name="Following" component={FollowingScreen} />
+              <Stack.Screen 
+                name="EditProfile" 
+                component={EditProfileScreen}
+                // Bu ekran için de soldan kayma animasyonu güzel durur
+                options={{
+                  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+                }}
+              />
+
+              <Stack.Screen
+                name='ChatScreen'
+                component={ChatScreen}
+              />
+
+              <Stack.Screen name="Followers" component={FollowersScreen} />
+              <Stack.Screen name="Following" component={FollowingScreen} />
+          </Stack.Group>
+
+
+          <Stack.Group screenOptions={{ presentation: 'modal' }}>
+              <Stack.Screen name="CreatePost" component={CreatePostScreen} />
+          </Stack.Group>
           
         </Stack.Navigator>
       </NavigationContainer>

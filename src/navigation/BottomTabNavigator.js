@@ -7,18 +7,19 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 // === GEREKLİ IMPORT'LARI TEMİZ BİR ŞEKİLDE YAPIYORUZ ===
 import colors from '../constants/colors.js';
 import HomeScreen from '../screens/Home/HomeScreen.js';
-import SearchScreen from '../screens/Search/SearchScreen.js'; // 'Search' büyük harfle, doğru yol
+import SearchScreen from '../screens/Search/SearchScreen.js';
 import MessageScreen from '../screens/Messages/MessagesScreen.js';
-import ProfilScreen from '../screens/Home/Profile/ProfilScreen.js'; // Sadece bir kere import ediliyor
+import ProfilScreen from '../screens/Home/Profile/ProfilScreen.js';
 
 const Tab = createBottomTabNavigator();
 
-const BottomTabNavigator = () => {
+// --- DEĞİŞİKLİK 1: Component artık dışarıdan 'navigation' prop'unu alıyor ---
+const BottomTabNavigator = ({ navigation }) => {
     const insets = useSafeAreaInsets();
 
     return (
         <Tab.Navigator
-            // --- screenOptions kısmında HİÇBİR DEĞİŞİKLİK YOK, MÜKEMMEL ---
+            // --- screenOptions kısmında HİÇBİR DEĞİŞİKLİK YOK ---
             screenOptions={{
                 headerShown: false,
                 tabBarShowLabel: true,
@@ -48,16 +49,21 @@ const BottomTabNavigator = () => {
                 },
             }}
         >
-            {/* --- EKRANLARDA HİÇBİR DEĞİŞİKLİK YOK, MÜKEMMEL --- */}
+            {/* --- DEĞİŞİKLİK 2: "Akış" ekranı güncellendi --- */}
             <Tab.Screen
                 name="Akış"
-                component={HomeScreen}
+                // component prop'u yerine, children olarak bir fonksiyon veriyoruz.
+                // Bu, HomeScreen'e 'navigation' prop'unu paslamamızı sağlar.
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <Ionicons name={focused ? "grid" : "grid-outline"} size={24} color={color} />
                     ),
                 }}
-            />
+            >
+                {() => <HomeScreen stackNavigation={navigation} />}
+            </Tab.Screen>
+            
+            {/* --- Diğer ekranlarda HİÇBİR DEĞİŞİKLİK YOK --- */}
             <Tab.Screen
                 name="Arama"
                 component={SearchScreen}
@@ -85,7 +91,6 @@ const BottomTabNavigator = () => {
                         <AntDesign name="user" size={24} color={color} />
                     ),
                 }}
-                // --- listeners kısmında HİÇBİR DEĞİŞİKLİK YOK, MÜKEMMEL ---
                 listeners={({ navigation }) => ({
                     tabPress: (e) => {
                         e.preventDefault();

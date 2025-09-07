@@ -1,70 +1,130 @@
 // src/screens/Home/HomeScreen.js
 
-import React from 'react';
-// DEĞİŞİKLİK 1: `useSafeAreaInsets` hook'unu import ediyoruz
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, FlatList, Alert, Text } from 'react-native'; // Text import'u eklendi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import colors from '../../constants/colors';
+import { useFocusEffect } from '@react-navigation/native'; // useNavigation eklendi
+import { ActivityIndicator } from 'react-native-paper';
 
-// Bileşenlerimizi dışarıdan çağırıyoruz
+import colors from '../../constants/colors';
+import { supabase } from '../../services/supabase';
+
 import HomeHeader from '../../components/home/HomeHeader';
 import FilterBar from '../../components/home/FilterBar';
 import PostCard from '../../components/home/PostCard';
 
-const HomeScreen = () => {
-    // DEĞİŞİKLİK 2: Hook'u çağırarak üst boşluğu alıyoruz
+const HomeScreen = ({ stackNavigation }) => {
     const insets = useSafeAreaInsets();
 
-    // Örnek gönderi verileri
-    const feedData = [
-        {
-            id: 1,
-            username: 'can_sahin',
-            userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
-            timestamp: '2 saat önce',
-            caption: 'Hafta sonu kaçamağı... Harika bir gündü! #bmw #m4 #carlife',
-            postImage: 'https://i0.shbdn.com/photos/19/23/19/x5_1256192319ogz.jpg',
-            likeCount: 356,
-            commentCount: 42,
-        },
-        {
-            id: 2,
-            username: 'aylin_garage',
-            userAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704e',
-            timestamp: 'Dün, 18:30',
-            caption: 'Yeni canavar geldi! Sizce ilk modifiye ne olmalı? Fikirlerinizi bekliyorum. #audi #rs6',
-            postImage: 'https://images.unsplash.com/photo-1617886322207-6f504e7472c5?w=500&q=80',
-            likeCount: 1204,
-            commentCount: 188,
-        },
-    ];
+    const [feedData, setFeedData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [currentUserProfile, setCurrentUserProfile] = useState(null);
 
+    const fetchFeed = async () => {
+        try {
+            // Önce mevcut kullanıcının profilini çek (Header'daki fotoğraf için)
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profileData, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('avatar_url')
+                    .eq('id', user.id)
+                    .single();
+                if (profileError) throw profileError;
+                setCurrentUserProfile(profileData);
+            }
+
+            // Şimdi ana akış gönderilerini çek
+            const { data, error } = await supabase.rpc('get_feed_posts', {
+                page: 1, 
+                page_size: 10
+            });
+
+            if (error) throw error;
+            setFeedData(data || []);
+
+        } catch (error) {
+            Alert.alert("Hata", "Ana akış yüklenirken bir sorun oluştu.");
+            console.error("Akış Hatası:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            setLoading(true);
+            fetchFeed();
+        }, [])
+    );
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { paddingTop: insets.top }]}>
+                {/* Artık navigation göndermiyoruz */}
+                <HomeHeader userAvatar={null} /> 
+                <FilterBar />
+                <View style={styles.center}>
+                    <ActivityIndicator color={colors.accent} />
+                </View>
+            </View>
+        );
+    }
+    
     return (
-        // DEĞİŞİKLİK 3: Ana View'e dinamik paddingTop veriyoruz
         <View style={[styles.container, { paddingTop: insets.top }]}>
-            <HomeHeader />
+            {/* HomeHeader'a artık kullanıcının avatarını prop olarak geçiyoruz */}
+             <HomeHeader userAvatar={currentUserProfile?.avatar_url} stackNavigation={stackNavigation} />
             <FilterBar />
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
-                {feedData.map(post => <PostCard key={post.id} post={post} />)}
-            </ScrollView>
+            
+            <FlatList
+                data={feedData}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => {
+                    const postCardProps = {
+                        id: item.id,
+                        username: item.username,
+                        userAvatar: item.avatar_url,
+                        timestamp: item.created_at,
+                        caption: item.caption,
+                        postImage: item.image_url,
+                        likeCount: 0,
+                        commentCount: 0,
+                    };
+                    return <PostCard post={postCardProps} />;
+                }}
+                contentContainerStyle={styles.scrollContainer}
+                ListEmptyComponent={() => (
+                    <View style={styles.center}>
+                        <Text style={styles.emptyText}>Takip ettiğin kimse yok veya henüz gönderi paylaşmadılar.</Text>
+                    </View>
+                )}
+            />
         </View>
     );
 };
 
-// DEĞİŞİKLİK 4: Stil dosyasını güncelliyoruz
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        // Header'ın arka planıyla bütünleşik olması için surface (beyaz) yapıyoruz
         backgroundColor: colors.surface,
     },
     scrollContainer: {
-        // Kartların olduğu alanın farklı renkte olması için background (gri) yapıyoruz
         backgroundColor: colors.background,
         paddingHorizontal: 10,
         paddingTop: 10,
-        paddingBottom: 120, // Alttaki navigasyon barının içeriği kapatmaması için
+        paddingBottom: 120,
     },
+    center: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    emptyText: {
+        color: colors.textSecondary,
+        textAlign: 'center',
+        paddingHorizontal: 20,
+    }
 });
 
 export default HomeScreen;

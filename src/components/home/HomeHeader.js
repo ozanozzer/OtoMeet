@@ -1,45 +1,63 @@
-// src/components/HomeHeader.js
+// src/components/home/HomeHeader.js
 
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import colors from '../../constants/colors'; // Dosya yolu güncellendi
+import colors from '../../constants/colors';
 
-const HomeHeader = () => (
-    <View style={styles.headerContainer}>
-        <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Akış</Text>
-            <Ionicons name="chevron-down" size={20} color={colors.text} />
+// Component artık 'userAvatar' prop'unu alıyor
+const HomeHeader = ({ userAvatar, stackNavigation }) => {
+
+    const navigation = useNavigation();
+
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>OtoMeet</Text>
+            
+            <View style={styles.rightIcons}>
+                <TouchableOpacity 
+                    onPress={() => stackNavigation.navigate('CreatePost')} 
+                    style={styles.iconButton}
+                >
+                    <Ionicons name="add-circle-outline" size={32} color={colors.text} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                    onPress={() => stackNavigation.navigate('BottomTabs', { screen: 'Profil' })} 
+                    style={styles.iconButton}
+                >
+                    <Image source={{ uri: userAvatar || '...' }} style={styles.avatar} />
+                </TouchableOpacity>
+            </View>
         </View>
-        <TouchableOpacity>
-            <Image
-                source={{ uri: 'https://i.pravatar.cc/150?u=a042581f4e29026704a' }}
-                style={styles.headerProfileImage}
-            />
-        </TouchableOpacity>
-    </View>
-);
+    );
+};
 
 const styles = StyleSheet.create({
-    headerContainer: {
+    container: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingBottom: 10,
+        paddingVertical: 10,
         backgroundColor: colors.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
     },
-    headerTitleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    headerTitle: {
+    title: {
         fontSize: 24,
         fontWeight: 'bold',
         color: colors.text,
-        marginRight: 4,
     },
-    headerProfileImage: {
+    rightIcons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    iconButton: {
+        marginLeft: 16, // İkonlar arasına boşluk koy
+    },
+    avatar: {
         width: 36,
         height: 36,
         borderRadius: 18,
