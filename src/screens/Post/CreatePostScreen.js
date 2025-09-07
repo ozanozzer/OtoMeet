@@ -1,11 +1,15 @@
 // src/screens/Post/CreatePostScreen.js
 
+import { decode } from 'base-64';
+if(typeof global.atob === 'undefined') {
+  global.atob = decode;
+}
 import React, { useState, useRef } from 'react';
 import { View, StyleSheet, Alert, Image, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
-import { Appbar, TextInput, Button, Text, ActivityIndicator, Chip } from 'react-native-paper';
+import { Appbar, TextInput, Button, Text, ActivityIndicator } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import PagerView from 'react-native-pager-view'; // Çoklu fotoğraf için
+import PagerView from 'react-native-pager-view'; // PagerView import'u
 import { supabase } from '../../services/supabase';
 import colors from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,53 +18,68 @@ const { width } = Dimensions.get('window');
 
 const CreatePostScreen = () => {
     const navigation = useNavigation();
-    const [images, setImages] = useState([]); // Artık tek bir URI değil, bir dizi
+    // DEĞİŞİKLİK: 'imageUri' yerine 'images' dizisi kullanıyoruz
+    const [images, setImages] = useState([]); 
     const [caption, setCaption] = useState('');
     const [uploading, setUploading] = useState(false);
     const [activeIndex, setActiveIndex] = useState(0);
     const pagerRef = useRef(null);
-    const CAPTION_MAX_LENGTH = 280; // Twitter gibi
+    const CAPTION_MAX_LENGTH = 280;
 
     const pickImage = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') { /* ... aynı ... */ return; }
+        let permissionResult = await ImagePicker.getMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+            permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (permissionResult.granted === false) {
+                Alert.alert('İzin Gerekli', 'Gönderi oluşturmak için galeri iznine ihtiyacımız var.');
+                return;
+            }
+        }
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaType.Images,
-            allowsEditing: true,
-            aspect: [4, 5],
-            quality: 0.7,
-            // YENİ: Birden fazla fotoğraf seçimine izin ver
-            allowsMultipleSelection: true, 
-            selectionLimit: 5, // En fazla 5 fotoğraf
-        });
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images, // 'MediaTypeOptions' kullanıyoruz
+                quality: 0.7,
+                allowsMultipleSelection: true,
+                selectionLimit: 5,
+                base64: true,
+            });
 
-        if (!result.canceled) {
-            setImages(result.assets); // Gelen asset dizisini state'e ata
+            if (!result.canceled) {
+                // 'imageUri' yerine 'images' state'ini güncelliyoruz
+                setImages(result.assets); 
+            }
+        } catch (error) {
+            console.error("Galeri açma hatası:", error);
+            Alert.alert("Hata", "Galeri açılırken bir sorun oluştu.");
         }
     };
 
+    // DEĞİŞİKLİK: handleShare fonksiyonu çoklu fotoğraf yükleyecek şekilde güncellendi
     const handleShare = async () => {
-        if (images.length === 0) { /* ... aynı ... */ return; }
+        if (images.length === 0) {
+            Alert.alert("Hata", "Lütfen bir fotoğraf seçin.");
+            return;
+        }
         setUploading(true);
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Kullanıcı bulunamadı.");
 
-            // Yüklenecek tüm dosya yollarını ve URL'lerini tutacak bir dizi
             const imageUrls = [];
 
-            // Seçilen her bir fotoğrafı sırayla yükle
             for (const image of images) {
                 const fileExt = image.uri.split('.').pop();
                 const fileName = `${user.id}_${Date.now()}_${Math.random()}.${fileExt}`;
-                const response = await fetch(image.uri);
-                const blob = await response.blob();
-
+                
+                // Fetch ve Blob'u SİLİYORUZ.
+                // Artık direkt base64 metnini kullanıyoruz.
                 const { data: uploadData, error: uploadError } = await supabase.storage
                     .from('posts')
-                    .upload(fileName, blob, { contentType: `image/${fileExt}` });
+                    .upload(fileName, decode(image.base64), { // 'decode' fonksiyonu base64'ü Supabase'in anlayacağı hale getirir
+                        contentType: `image/${fileExt}`
+                    });
 
                 if (uploadError) throw uploadError;
                 
@@ -68,14 +87,11 @@ const CreatePostScreen = () => {
                 imageUrls.push(publicUrl);
             }
             
-            // Veriyi 'posts' tablosuna kaydet
-            // Not: image_url sütununun tipi 'text[]' (text dizisi) olmalı
             const { error: insertError } = await supabase
                 .from('posts')
                 .insert({
                     user_id: user.id,
-                    image_url: imageUrls[0], // Şimdilik sadece ilk fotoğrafı ana URL olarak kaydediyoruz
-                    // İleride 'image_urls' adında text[] bir sütun oluşturulabilir
+                    image_url: imageUrls[0],
                     caption: caption.trim()
                 });
             
@@ -92,12 +108,13 @@ const CreatePostScreen = () => {
         }
     };
 
-        return (
+
+    return (
         <View style={styles.container}>
             <Appbar.Header style={styles.header}>
                 <Appbar.Action icon="close" onPress={() => navigation.goBack()} />
-                <Appbar.Content title="Yeni Gönderi" titleStyle={styles.headerTitle} />
-                <Button onPress={handleShare} disabled={uploading || images.length === 0} loading={uploading} mode="contained" style={styles.shareButton}>
+                <Appbar.Content title="Yeni Gönderi" titleStyle={{ fontWeight: 'bold' }} />
+                <Button onPress={handleShare} disabled={uploading || images.length === 0} loading={uploading} mode="contained" style={{borderRadius: 20}}>
                     Paylaş
                 </Button>
             </Appbar.Header>
@@ -154,7 +171,6 @@ const CreatePostScreen = () => {
                 </View>
             </ScrollView>
             
-            {/* --- İŞTE DÜZELTİLMİŞ BLOK --- */}
             {uploading && (
                 <View style={styles.uploadingOverlay}>
                     <ActivityIndicator animating={true} color={colors.textLight} size="large" />
@@ -165,12 +181,10 @@ const CreatePostScreen = () => {
     );
 };
 
-// --- STİLLER TAMAMEN AYNI, HİÇBİR DEĞİŞİKLİK YOK ---
+// --- STİLLER DE TAMAMEN MODERNLEŞTİRİLDİ ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: { backgroundColor: colors.surface, elevation: 0 },
-    headerTitle: { fontWeight: 'bold' },
-    shareButton: { borderRadius: 20 },
     content: { padding: 16 },
     imageContainer: {
         width: '100%',
@@ -180,18 +194,10 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: colors.border,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
-    pagerView: {
-        width: '100%',
-        height: '100%',
-    },
-    imagePreview: {
-        width: '100%',
-        height: '100%',
-    },
-    placeholder: { alignItems: 'center' },
+    pagerView: { width: '100%', height: '100%' },
+    imagePreview: { width: '100%', height: '100%' },
+    placeholder: { flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' },
     placeholderText: { marginTop: 8, color: colors.textSecondary, fontSize: 16 },
     retakeButton: {
         position: 'absolute',
@@ -210,35 +216,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         borderRadius: 12,
     },
-    pageIndicatorText: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 12,
-    },
-    captionInput: {
-        backgroundColor: colors.surface,
-        fontSize: 16,
-        minHeight: 120,
-    },
-    characterCount: {
-        textAlign: 'right',
-        color: colors.textSecondary,
-        fontSize: 12,
-        marginTop: 4,
-        marginRight: 8,
-    },
+    pageIndicatorText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
+    captionInput: { backgroundColor: colors.surface, fontSize: 16, minHeight: 120 },
+    characterCount: { textAlign: 'right', color: colors.textSecondary, fontSize: 12, marginTop: 4, marginRight: 8 },
     uploadingOverlay: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    uploadingText: {
-        marginTop: 16,
-        color: colors.textLight,
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
+    uploadingText: { marginTop: 16, color: colors.textLight, fontSize: 18, fontWeight: 'bold' },
 });
 
 export default CreatePostScreen;

@@ -2,6 +2,17 @@
   "expo": {
     "name": "otoMeet",
     "slug": "otoMeet",
+
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Uygulama, gönderilerinize eklemek için fotoğraflarınıza erişim izni istiyor.",
+          "cameraPermission": "Uygulama, fotoğraf çekmek için kameranıza erişim izni istiyor."
+        }
+      ]
+    ],
+    
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
