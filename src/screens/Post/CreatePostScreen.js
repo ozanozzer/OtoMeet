@@ -63,50 +63,71 @@ const CreatePostScreen = () => {
         }
         setUploading(true);
 
+        // Şimdilik sadece ilk fotoğrafı alıyoruz
+        const image = images[0];
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("Kullanıcı bulunamadı.");
 
-            const imageUrls = [];
-
-            for (const image of images) {
-                const fileExt = image.uri.split('.').pop();
-                const fileName = `${user.id}_${Date.now()}_${Math.random()}.${fileExt}`;
-                
-                // Fetch ve Blob'u SİLİYORUZ.
-                // Artık direkt base64 metnini kullanıyoruz.
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('posts')
-                    .upload(fileName, decode(image.base64), { // 'decode' fonksiyonu base64'ü Supabase'in anlayacağı hale getirir
-                        contentType: `image/${fileExt}`
-                    });
-
-                if (uploadError) throw uploadError;
-                
-                const { data: { publicUrl } } = supabase.storage.from('posts').getPublicUrl(uploadData.path);
-                imageUrls.push(publicUrl);
-            }
+            // Dosya adını ve uzantısını al
+            const fileExt = image.uri.split('.').pop();
+            const fileName = `${user.id}_${Date.now()}.${fileExt}`;
             
+            // FormData objesini oluştur
+            const formData = new FormData();
+            
+            // FormData'ya dosyayı ekle. Üçüncü parametre dosya adıdır.
+            // Bu yapı, React Native'in Supabase'e dosyayı doğru göndermesini sağlar.
+            formData.append('file', {
+                uri: image.uri,
+                name: fileName,
+                type: image.type ? `image/${fileExt}` : `image`, // image.type varsa kullan, yoksa genel bir tip ver
+            });
+            
+            // Fotoğrafı Storage'a yükle
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('posts')
+                .upload(fileName, formData); // Blob veya base64 yerine direkt formData'yı gönder
+
+            if (uploadError) {
+                console.error("Supabase Yükleme Hatası:", uploadError);
+                throw uploadError;
+            }
+            if (!uploadData) {
+                throw new Error("Dosya yüklendi ama bir cevap dönmedi.");
+            }
+
+            // Yüklenen fotoğrafın URL'ini al
+            const { data: { publicUrl } } = supabase.storage
+                .from('posts')
+                .getPublicUrl(uploadData.path);
+            
+            // Veriyi 'posts' tablosuna kaydet
             const { error: insertError } = await supabase
                 .from('posts')
                 .insert({
                     user_id: user.id,
-                    image_url: imageUrls[0],
+                    image_url: publicUrl,
                     caption: caption.trim()
                 });
             
-            if (insertError) throw insertError;
+            if (insertError) {
+                console.error("Supabase Ekleme Hatası:", insertError);
+                throw insertError;
+            }
             
             Alert.alert("Başarılı", "Gönderin paylaşıldı!");
             navigation.goBack();
 
         } catch (error) {
             Alert.alert("Hata", "Gönderi paylaşılırken bir sorun oluştu.");
-            console.error("Paylaşım Hatası:", error);
+            console.error("Paylaşım Hatası Detayı:", error);
         } finally {
             setUploading(false);
         }
     };
+
 
 
     return (

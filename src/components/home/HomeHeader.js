@@ -9,7 +9,6 @@ import colors from '../../constants/colors';
 // Component artık 'userAvatar' prop'unu alıyor
 const HomeHeader = ({ userAvatar, stackNavigation }) => {
 
-    const navigation = useNavigation();
 
     return (
         <View style={styles.container}>
