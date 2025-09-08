@@ -51,6 +51,29 @@ const HomeScreen = ({ stackNavigation }) => {
         }
     };
 
+    const handleLikeToggle = async (postId, isCurrentlyLiked) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            if (isCurrentlyLiked) {
+                // Beğeniyi geri al (UNLIKE)
+                await supabase.from('likes').delete().match({ post_id: postId, user_id: user.id });
+            } else {
+                // Beğen (LIKE)
+                await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+            }
+
+            // Arayüzü anında güncellemek için feed'i yeniden çek
+            // Not: Bu en basit yöntemdir. Daha optimizasyonu, sadece o post'un state'ini güncellemektir.
+            fetchFeed();
+
+        } catch (error) {
+            console.error("Beğeni hatası:", error);
+            Alert.alert("Hata", "Beğeni işlemi sırasında bir sorun oluştu.");
+        }
+    };
+
     useFocusEffect(
         useCallback(() => {
             setLoading(true);
@@ -88,15 +111,20 @@ const HomeScreen = ({ stackNavigation }) => {
                         timestamp: item.created_at,
                         caption: item.caption,
                         postImage: item.image_url,
-                        likeCount: 0,
-                        commentCount: 0,
+                        // Veritabanından gelen yeni verileri ekliyoruz
+                        likeCount: item.like_count,
+                        isLiked: item.is_liked_by_user, // 'isLiked' olarak gönderiyoruz
                     };
-                    return <PostCard post={postCardProps} />;
-                }}
-                contentContainerStyle={styles.scrollContainer}
-                ListEmptyComponent={() => (
+
+                return <PostCard post={postCardProps} 
+                    onLikeToggle={handleLikeToggle}
+                />;
+                    }}
+
+                    contentContainerStyle={styles.scrollContainer}
+                    ListEmptyComponent={() => (
                     <View style={styles.center}>
-                        <Text style={styles.emptyText}>Takip ettiğin kimse yok veya henüz gönderi paylaşmadılar.</Text>
+                    <Text style={styles.emptyText}>Takip ettiğin kimse yok veya henüz gönderi paylaşmadılar.</Text>
                     </View>
                 )}
             />

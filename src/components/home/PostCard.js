@@ -1,44 +1,70 @@
-// src/components/PostCard.js
+// src/components/home/PostCard.js
 
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { formatDistanceToNow } from 'date-fns';
+import { tr } from 'date-fns/locale';
 import colors from '../../constants/colors';
 
-const PostCard = ({ post }) => (
-    <View style={styles.postCard}>
-        <View style={styles.postHeader}>
-            <Image source={{ uri: post.userAvatar }} style={styles.avatar} />
-            <View>
-                <Text style={styles.username}>{post.username}</Text>
-                <Text style={styles.postDate}>{post.timestamp}</Text>
+// Component artık 'post' ve 'onLikeToggle' proplarını alıyor
+const PostCard = ({ post, onLikeToggle }) => {
+
+    // Zamanı formatlayan yardımcı fonksiyon
+    const formatTimestamp = (timestamp) => {
+        if (!timestamp) return '';
+        return formatDistanceToNow(new Date(timestamp), { addSuffix: true, locale: tr });
+    };
+
+    return (
+        <View style={styles.postCard}>
+            <View style={styles.postHeader}>
+                <Image source={{ uri: post.userAvatar }} style={styles.avatar} />
+                <View>
+                    <Text style={styles.username}>{post.username}</Text>
+                    {/* Tarih artık dinamik olarak formatlanıyor */}
+                    <Text style={styles.postDate}>{formatTimestamp(post.timestamp)}</Text>
+                </View>
+                <TouchableOpacity style={styles.moreOptionsButton}>
+                    <Ionicons name="ellipsis-horizontal" size={24} color={colors.icon} />
+                </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.moreOptionsButton}>
-                <Ionicons name="ellipsis-horizontal" size={24} color={colors.icon} />
-            </TouchableOpacity>
+
+            <Text style={styles.caption}>{post.caption}</Text>
+
+            {post.postImage && (
+                <Image source={{ uri: post.postImage }} style={styles.postImage} />
+            )}
+
+            <View style={styles.statsContainer}>
+                {/* --- BÜTÜN DEĞİŞİKLİK BU BLOKTA --- */}
+                <TouchableOpacity 
+                    style={styles.statItem}
+                    onPress={() => onLikeToggle(post.id, post.isLiked)}
+                    activeOpacity={0.7}
+                >
+                    {/* İkon artık 'isLiked' durumuna göre değişiyor */}
+                    <Ionicons 
+                        name={post.isLiked ? "heart" : "heart-outline"} 
+                        size={22} 
+                        color={post.isLiked ? colors.error : colors.icon} 
+                    />
+                    {/* Beğeni sayısı artık dinamik */}
+                    <Text style={styles.statText}>{post.likeCount}</Text>
+                </TouchableOpacity>
+
+                <View style={styles.statItem}>
+                    <Ionicons name="chatbubble-outline" size={20} color={colors.icon} />
+                    <Text style={styles.statText}>{post.commentCount}</Text>
+                </View>
+                <TouchableOpacity style={styles.shareIcon}>
+                    <Ionicons name="share-social-outline" size={22} color={colors.icon} />
+                </TouchableOpacity>
+            </View>
         </View>
+    );
+};
 
-        <Text style={styles.caption}>{post.caption}</Text>
-
-        {post.postImage && (
-            <Image source={{ uri: post.postImage }} style={styles.postImage} />
-        )}
-
-        <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-                <Ionicons name="arrow-up-circle-outline" size={22} color={colors.icon} />
-                <Text style={styles.statText}>{post.likeCount}</Text>
-            </View>
-            <View style={styles.statItem}>
-                <Ionicons name="chatbubble-outline" size={20} color={colors.icon} />
-                <Text style={styles.statText}>{post.commentCount}</Text>
-            </View>
-            <TouchableOpacity style={styles.shareIcon}>
-                <Ionicons name="share-social-outline" size={22} color={colors.icon} />
-            </TouchableOpacity>
-        </View>
-    </View>
-);
 
 const styles = StyleSheet.create({
     postCard: {

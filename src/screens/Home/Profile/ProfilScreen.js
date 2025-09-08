@@ -12,12 +12,11 @@ import colors from '../../../constants/colors';
 const { width } = Dimensions.get('window');
 const postSize = width / 3;
 
+// --- DÜZELTME 1: PostItem'ı doğru prop'u kullanacak şekilde güncelle ---
 const PostItem = ({ post }) => (
     <TouchableOpacity style={styles.postItem}>
-        <Image source={{ uri: post.image }} style={styles.postImage} />
-        {post.type === 'video' && (
-            <Ionicons name="play" size={24} color="white" style={styles.videoIcon} />
-        )}
+        {/* Supabase'den 'image_url' gelir, 'image' değil */}
+        <Image source={{ uri: post.image_url }} style={styles.postImage} />
     </TouchableOpacity>
 );
 
@@ -38,6 +37,9 @@ const ProfilScreen = () => {
     const [followerCount, setFollowerCount] = useState(0);
     const [followingCount, setFollowingCount] = useState(0);
 
+    const [userPosts, setUserPosts] = useState([]);
+
+    // --- DÜZELTME 2: fetchProfile fonksiyonu güncellendi ---
     const fetchProfile = useCallback(async () => {
         try {
             const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -47,40 +49,26 @@ const ProfilScreen = () => {
 
             setIsMyProfile(userToFetchId === currentUser?.id);
 
-            const { data, error } = await supabase
-                .from('profiles')
-                .select(`id, username, full_name, avatar_url, biography`)
-                .eq('id', userToFetchId)
-                .single();
+            // Promise.all ile tüm sorguları aynı anda gönder, daha hızlı
+            const [profileRes, postsRes, followersRes, followingRes, followingStatusRes] = await Promise.all([
+                supabase.from('profiles').select(`id, username, full_name, avatar_url, biography`).eq('id', userToFetchId).single(),
+                supabase.from('posts').select('id, image_url').eq('user_id', userToFetchId).order('created_at', { ascending: false }),
+                supabase.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', userToFetchId),
+                supabase.from('followers').select('*', { count: 'exact', head: true }).eq('follower_id', userToFetchId),
+                !isMyProfile && currentUser ? supabase.from('followers').select('id').eq('follower_id', currentUser.id).eq('following_id', userToFetchId) : Promise.resolve({ data: [] })
+            ]);
+            
+            if (profileRes.error && profileRes.error.code !== 'PGRST116') throw profileRes.error;
+            setProfile(profileRes.data);
 
-            if (error) {
-                if (error.code === 'PGRST116') setProfile(null);
-                else throw error;
-            } else {
-                setProfile(data);
-            }
+            if (postsRes.error) throw postsRes.error;
+            setUserPosts(postsRes.data || []);
 
-            const { count: followers } = await supabase
-                .from('followers')
-                .select('*', { count: 'exact', head: true })
-                .eq('following_id', userToFetchId);
-            setFollowerCount(followers || 0);
-
-            const { count: following } = await supabase
-                .from('followers')
-                .select('*', { count: 'exact', head: true })
-                .eq('follower_id', userToFetchId);
-            setFollowingCount(following || 0);
-
-            if (!isMyProfile && currentUser) {
-                const { data: followData, error: followError } = await supabase
-                    .from('followers')
-                    .select('id', { count: 'exact' })
-                    .eq('follower_id', currentUser.id)
-                    .eq('following_id', userToFetchId);
-
-                if (followError) throw followError;
-                setIsFollowing(followData.length > 0);
+            setFollowerCount(followersRes.count || 0);
+            setFollowingCount(followingRes.count || 0);
+            
+            if (followingStatusRes.data) {
+                setIsFollowing(followingStatusRes.data.length > 0);
             }
 
         } catch (error) {
@@ -140,31 +128,26 @@ const ProfilScreen = () => {
         }
     };
 
-    const handleSendMessage = async () => {
-    try {
-        if (!profile?.id) throw new Error("Profil ID bulunamadı.");
+    const handleSendMessage = async (targetUserId) => {
+        try {
+            if (!targetUserId) throw new Error("Profil ID bulunamadı.");
+            const { data, error } = await supabase.rpc('create_conversation', {
+                other_user_id: targetUserId
+            }).single();
 
-        // .single() komutu bize [{...}] yerine {...} şeklinde tek bir obje döndürür.
-        const { data, error } = await supabase.rpc('create_conversation', {
-            other_user_id: profile.id
-        }).single();
+            if (error) throw error;
+            
+            navigation.navigate('ChatScreen', {
+                conversationId: data.conversation_id,
+                otherUserName: data.other_user_name || profile.username,
+                otherUserAvatar: data.other_user_avatar
+            });
 
-        if (error) throw error;
-        
-        // Şimdi, bu objenin içinden sadece ihtiyacımız olan parçaları alıp gönderiyoruz.
-        navigation.navigate('ChatScreen', {
-            conversationId: data.conversation_id, // <-- DÜZELTME 1: Sadece ID'yi gönder
-            otherUserName: data.other_user_name || profile.username,
-            otherUserAvatar: data.other_user_avatar
-        });
-
-    } catch (error) {
-        console.error("SOHBET BAŞLATMA HATASI: ", error);
-        Alert.alert('Hata', 'Sohbet başlatılırken bir sorun oluştu');
-    }
-};
-
-    // --- BÜTÜN DEĞİŞİKLİK BURADA BAŞLIYOR (YAPI DEĞİŞİKLİĞİ) ---
+        } catch (error) {
+            console.error("SOHBET BAŞLATMA HATASI: ", error);
+            Alert.alert('Hata', 'Sohbet başlatılırken bir sorun oluştu');
+        }
+    };
 
     if (loading) {
         return (
@@ -182,14 +165,8 @@ const ProfilScreen = () => {
         );
     }
 
-    // Artık 'profile' dolu olduğundan eminiz, şimdi ekranı çizebiliriz.
+    // --- DÜZELTME 3: Sahte 'userPosts' dizisi TAMAMEN SİLİNDİ ---
     
-    const userPosts = [
-        { id: '1', image: 'https://i0.shbdn.com/photos/19/23/19/x5_1256192319ogz.jpg', type: 'image' },
-        { id: '2', image: 'https://images.unsplash.com/photo-1617886322207-6f504e7472c5?w=500&q=80', type: 'image' },
-        { id: '3', image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80', type: 'image' },
-    ];
-
     const ListHeader = () => (
         <View style={styles.headerContainer}>
             <View style={styles.profileInfo}>
@@ -198,13 +175,10 @@ const ProfilScreen = () => {
                     source={{ uri: profile.avatar_url || 'https://via.placeholder.com/150' }} 
                 />
                 <View style={styles.statsContainer}>
-                    {/* 1. Gönderi - Tıklanamaz */}
                     <View style={styles.statItem}>
                         <Text style={styles.statNumber}>{userPosts.length}</Text>
                         <Text>Gönderi</Text>
                     </View>
-
-                    {/* 2. Takipçiler - Tıklanabilir */}
                     <TouchableOpacity 
                         style={styles.statItem} 
                         onPress={() => navigation.navigate('Followers', { 
@@ -215,8 +189,6 @@ const ProfilScreen = () => {
                         <Text style={styles.statNumber}>{followerCount}</Text>
                         <Text>Takipçi</Text>
                     </TouchableOpacity>
-
-                    {/* 3. Takip Edilenler - Tıklanabilir */}
                     <TouchableOpacity 
                         style={styles.statItem} 
                         onPress={() => navigation.navigate('Following', { 
@@ -238,25 +210,23 @@ const ProfilScreen = () => {
             {!isMyProfile && (
                 <View style={[styles.buttonContainer, { flexDirection: 'row'}]}>
                     {isFollowing ? (
-                        <Button mode="outlined" onPress={handleUnfollow} style={styles.unfollowButton} labelStyle={{color: colors.textSecondary}} loading={isFollowLoading} disabled={isFollowLoading}>
+                        <Button mode="outlined" onPress={handleUnfollow} style={[styles.button, styles.unfollowButton]} labelStyle={{color: colors.textSecondary}} loading={isFollowLoading} disabled={isFollowLoading}>
                             Takibi Bırak
                         </Button>
                     ) : (
-                        <Button mode="contained" onPress={handleFollow} buttonColor={colors.accent} loading={isFollowLoading} disabled={isFollowLoading}>
+                        <Button mode="contained" onPress={handleFollow} buttonColor={colors.accent} loading={isFollowLoading} disabled={isFollowLoading} style={styles.button}>
                             Takip Et
                         </Button>
                     )}
-
                     <Button
                         mode="outlined"
-                        onPress={() => handleSendMessage(profile.id)} // Fonksiyon arrow function ile sarmalandı
+                        onPress={() => handleSendMessage(profile.id)}
                         style={[styles.button, styles.messageButton]}
                         icon="message-text-outline">
                             Mesaj
                     </Button>
                 </View>
             )}
-
             <Divider style={styles.divider} />
         </View>
     );
@@ -267,7 +237,7 @@ const ProfilScreen = () => {
                 <View style={{width: 50}} />
                 <Title style={styles.headerTitle}>@{profile.username}</Title>
                 {!isMyProfile ? (
-                     <View style={{width: 50}} /> // Başlığı ortalamak için boş view
+                     <View style={{width: 50}} />
                 ) : (
                     <IconButton
                         icon="cog-outline"
