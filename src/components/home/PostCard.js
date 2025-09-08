@@ -1,18 +1,51 @@
 // src/components/home/PostCard.js
 
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
+// YENİ EKLENEN SATIR
+import { Menu, Divider, IconButton } from 'react-native-paper'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import colors from '../../constants/colors';
+import { supabase } from '../../services/supabase';
 
-// Component artık 'post' ve 'onLikeToggle' proplarını alıyor
-const PostCard = ({ post, onLikeToggle }) => {
-
+const PostCard = ({ post, onLikeToggle, currentUser }) => {
+    
     const navigation = useNavigation(); 
 
+    const [isMenuVisible, setMenuVisible] = useState(false);
+    const openMenu = () => setMenuVisible(true);
+    const closeMenu = () => setMenuVisible(false);
+
+    const handleDeletePost = async () => {
+        closeMenu(); // Menüyü kapat
+        Alert.alert(
+            "Gönderiyi Sil",
+            "Bu gönderiyi kalıcı olarak silmek istediğinden emin misin?",
+            [
+                { text: "Vazgeç", style: "cancel" },
+                { 
+                    text: "Sil", 
+                    style: "destructive", 
+                    onPress: async () => {
+                        try {
+                            // Önce Storage'dan resmi sil
+                            const fileName = post.postImage.split('/').pop();
+                            await supabase.storage.from('posts').remove([fileName]);
+                            // Sonra veritabanından gönderiyi sil
+                            await supabase.from('posts').delete().eq('id', post.id);
+                            // Not: Akışın anında güncellenmesi için HomeScreen'de bir state yönetimi gerekir.
+                            // Şimdilik en basit haliyle, sayfa yenilendiğinde kaybolacaktır.
+                        } catch (error) {
+                            Alert.alert("Hata", "Gönderi silinirken bir sorun oluştu.");
+                        }
+                    } 
+                }
+            ]
+        );
+    };
 
     // Zamanı formatlayan yardımcı fonksiyon
     const formatTimestamp = (timestamp) => {
@@ -20,18 +53,44 @@ const PostCard = ({ post, onLikeToggle }) => {
         return formatDistanceToNow(new Date(timestamp), { addSuffix: true, locale: tr });
     };
 
+    const isMyPost = currentUser?.id === post.userId; // `HomeScreen`'den `userId`'yi de göndermemiz gerekecek
+
+
     return (
         <View style={styles.postCard}>
             <View style={styles.postHeader}>
                 <Image source={{ uri: post.userAvatar }} style={styles.avatar} />
-                <View>
+                <View style={styles.headerContent}>
                     <Text style={styles.username}>{post.username}</Text>
-                    {/* Tarih artık dinamik olarak formatlanıyor */}
                     <Text style={styles.postDate}>{formatTimestamp(post.timestamp)}</Text>
                 </View>
-                <TouchableOpacity style={styles.moreOptionsButton}>
-                    <Ionicons name="ellipsis-horizontal" size={24} color={colors.icon} />
-                </TouchableOpacity>
+
+                <Menu
+                    visible={isMenuVisible}
+                    onDismiss={closeMenu}
+                    anchor={
+                        <IconButton
+                            icon="dots-horizontal"
+                            size={24}
+                            onPress={openMenu}
+                            style={{ marginLeft: 'auto' }} // Bu, ikonu en sağa yaslar
+                        />
+                    }
+                    contentStyle={{ backgroundColor: colors.surface }}
+                >
+                    {isMyPost ? (
+                        <>
+                            {/* DÜZENLEME DAHA YAPILMADI */}
+                            <Menu.Item onPress={() => {closeMenu()}} title="Düzenle" />
+                            <Menu.Item onPress={handleDeletePost} title="Sil" titleStyle={{ color: colors.error }} />
+                        </>
+                    ) : (
+                        <>
+                            <Menu.Item onPress={() => {closeMenu()}} title="Şikayet Et" titleStyle={{ color: colors.error }} />
+                            <Menu.Item onPress={() => {closeMenu()}} title="Engelle" />
+                        </>
+                    )}
+                </Menu>
             </View>
 
             <Text style={styles.caption}>{post.caption}</Text>
@@ -89,6 +148,9 @@ const styles = StyleSheet.create({
     postHeader: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    headerContent: {
+        flex: 1, // Bu, "mevcut tüm boş alanı kapla" demektir
     },
     avatar: {
         width: 40,

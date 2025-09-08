@@ -14,7 +14,7 @@ const formatTimestamp = (timestamp) => {
     if (isYesterday(date)) {
         return 'Dün'; // Dün ise: "Dün"
     }
-    return format(date, 'dd.MM.yyyy'); // Daha eski ise: "05.09.2025"
+    return format(date, 'dd.MM.yyyy'); // Daha eski ise: "05.09.205"
 };
 
 // 'chat'in yanına 'onPress' de prop olarak eklendi

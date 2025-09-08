@@ -1,9 +1,9 @@
 // src/screens/Home/HomeScreen.js
 
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Alert, Text } from 'react-native'; // Text import'u eklendi
+import React, { useState, useCallback, useEffect } from 'react'; // useEffect eklendi
+import { View, StyleSheet, FlatList, Alert, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native'; // useNavigation eklendi
+import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator } from 'react-native-paper';
 
 import colors from '../../constants/colors';
@@ -20,9 +20,17 @@ const HomeScreen = ({ stackNavigation }) => {
     const [loading, setLoading] = useState(true);
     const [currentUserProfile, setCurrentUserProfile] = useState(null);
 
+    const [currentUser, setCurrentUser] = useState(null);
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setCurrentUser(user);
+        });
+    }, []);
+
+
     const fetchFeed = async () => {
         try {
-            // Önce mevcut kullanıcının profilini çek (Header'daki fotoğraf için)
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const { data: profileData, error: profileError } = await supabase
@@ -34,7 +42,6 @@ const HomeScreen = ({ stackNavigation }) => {
                 setCurrentUserProfile(profileData);
             }
 
-            // Şimdi ana akış gönderilerini çek
             const { data, error } = await supabase.rpc('get_feed_posts', {
                 page: 1, 
                 page_size: 10
@@ -51,56 +58,48 @@ const HomeScreen = ({ stackNavigation }) => {
         }
     };
 
-    // HomeScreen.js içinde
-
-const handleLikeToggle = async (postId, isCurrentlyLiked) => {
-    // 1. ADIM: Arayüzü ANINDA güncelle (İyimser Güncelleme)
-    setFeedData(currentFeed => 
-        currentFeed.map(post => {
-            if (post.id === postId) {
-                return {
-                    ...post,
-                    is_liked_by_user: !isCurrentlyLiked, // Beğeni durumunu tersine çevir
-                    like_count: isCurrentlyLiked ? post.like_count - 1 : post.like_count + 1 // Sayıyı artır/azalt
-                };
-            }
-            return post;
-        })
-    );
-
-    // 2. ADIM: Arka planda veritabanı işlemini yap
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
-
-                if (isCurrentlyLiked) {
-                    // Beğeniyi geri al
-                    const { error } = await supabase.from('likes').delete().match({ post_id: postId, user_id: user.id });
-                    if (error) throw error;
-                } else {
-                    // Beğen
-                    const { error } = await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
-                    if (error) throw error;
+    const handleLikeToggle = async (postId, isCurrentlyLiked) => {
+        setFeedData(currentFeed => 
+            currentFeed.map(post => {
+                if (post.id === postId) {
+                    return {
+                        ...post,
+                        is_liked_by_user: !isCurrentlyLiked,
+                        like_count: isCurrentlyLiked ? post.like_count - 1 : post.like_count + 1
+                    };
                 }
-            } catch (error) {
-                console.error("Beğeni hatası:", error);
-                // 3. ADIM: Eğer hata olursa, yaptığın iyimser güncellemeyi geri al
-                setFeedData(currentFeed => 
-                    currentFeed.map(post => {
-                        if (post.id === postId) {
-                            return {
-                                ...post,
-                                is_liked_by_user: isCurrentlyLiked, // Durumu eski haline getir
-                                like_count: isCurrentlyLiked ? post.like_count + 1 : post.like_count - 1 // Sayıyı eski haline getir
-                            };
-                        }
-                        return post;
-                    })
-                );
-                Alert.alert("Hata", "Beğeni işlemi sırasında bir sorun oluştu.");
+                return post;
+            })
+        );
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            if (isCurrentlyLiked) {
+                const { error } = await supabase.from('likes').delete().match({ post_id: postId, user_id: user.id });
+                if (error) throw error;
+            } else {
+                const { error } = await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+                if (error) throw error;
             }
-            // 'fetchFeed()' ÇAĞRISINI BURADAN KALDIRDIK!
-        };
+        } catch (error) {
+            console.error("Beğeni hatası:", error);
+            setFeedData(currentFeed => 
+                currentFeed.map(post => {
+                    if (post.id === postId) {
+                        return {
+                            ...post,
+                            is_liked_by_user: isCurrentlyLiked,
+                            like_count: isCurrentlyLiked ? post.like_count + 1 : post.like_count - 1
+                        };
+                    }
+                    return post;
+                })
+            );
+            Alert.alert("Hata", "Beğeni işlemi sırasında bir sorun oluştu.");
+        }
+    };
 
     useFocusEffect(
         useCallback(() => {
@@ -112,8 +111,8 @@ const handleLikeToggle = async (postId, isCurrentlyLiked) => {
     if (loading) {
         return (
             <View style={[styles.container, { paddingTop: insets.top }]}>
-                {/* Artık navigation göndermiyoruz */}
-                <HomeHeader userAvatar={null} /> 
+                {/* DÜZELTME 3: stackNavigation prop'u eklendi */}
+                <HomeHeader userAvatar={null} stackNavigation={stackNavigation} /> 
                 <FilterBar />
                 <View style={styles.center}>
                     <ActivityIndicator color={colors.accent} />
@@ -124,7 +123,6 @@ const handleLikeToggle = async (postId, isCurrentlyLiked) => {
     
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
-            {/* HomeHeader'a artık kullanıcının avatarını prop olarak geçiyoruz */}
              <HomeHeader userAvatar={currentUserProfile?.avatar_url} stackNavigation={stackNavigation} />
             <FilterBar />
             
@@ -134,28 +132,28 @@ const handleLikeToggle = async (postId, isCurrentlyLiked) => {
                 renderItem={({ item }) => {
                     const postCardProps = {
                         id: item.id,
+                        userId: item.user_id,
                         username: item.username,
                         userAvatar: item.avatar_url,
                         timestamp: item.created_at,
                         caption: item.caption,
                         postImage: item.image_url,
-                        // Veritabanından gelen yeni verileri ekliyoruz
-                        likeCount: item.like_count || 0, // null ise 0 göster
+                        likeCount: item.like_count || 0,
                         isLiked: item.is_liked_by_user,
-                        commentCount: item.comment_count || 0, // null ise 0 göster
-
-
+                        commentCount: item.comment_count || 0,
                     };
 
-                return <PostCard post={postCardProps} 
-                    onLikeToggle={handleLikeToggle}
-                />;
-                    }}
-
-                    contentContainerStyle={styles.scrollContainer}
-                    ListEmptyComponent={() => (
+                    // DÜZELTME 2: Fazladan 'currentUser' prop'u kaldırıldı
+                    return <PostCard 
+                                post={postCardProps} 
+                                onLikeToggle={handleLikeToggle}
+                                currentUser={currentUser} 
+                           />;
+                }}
+                contentContainerStyle={styles.scrollContainer}
+                ListEmptyComponent={() => (
                     <View style={styles.center}>
-                    <Text style={styles.emptyText}>Takip ettiğin kimse yok veya henüz gönderi paylaşmadılar.</Text>
+                        <Text style={styles.emptyText}>Takip ettiğin kimse yok veya henüz gönderi paylaşmadılar.</Text>
                     </View>
                 )}
             />
