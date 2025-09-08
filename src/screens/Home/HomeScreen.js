@@ -51,28 +51,56 @@ const HomeScreen = ({ stackNavigation }) => {
         }
     };
 
-    const handleLikeToggle = async (postId, isCurrentlyLiked) => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+    // HomeScreen.js içinde
 
-            if (isCurrentlyLiked) {
-                // Beğeniyi geri al (UNLIKE)
-                await supabase.from('likes').delete().match({ post_id: postId, user_id: user.id });
-            } else {
-                // Beğen (LIKE)
-                await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+const handleLikeToggle = async (postId, isCurrentlyLiked) => {
+    // 1. ADIM: Arayüzü ANINDA güncelle (İyimser Güncelleme)
+    setFeedData(currentFeed => 
+        currentFeed.map(post => {
+            if (post.id === postId) {
+                return {
+                    ...post,
+                    is_liked_by_user: !isCurrentlyLiked, // Beğeni durumunu tersine çevir
+                    like_count: isCurrentlyLiked ? post.like_count - 1 : post.like_count + 1 // Sayıyı artır/azalt
+                };
             }
+            return post;
+        })
+    );
 
-            // Arayüzü anında güncellemek için feed'i yeniden çek
-            // Not: Bu en basit yöntemdir. Daha optimizasyonu, sadece o post'un state'ini güncellemektir.
-            fetchFeed();
+    // 2. ADIM: Arka planda veritabanı işlemini yap
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
 
-        } catch (error) {
-            console.error("Beğeni hatası:", error);
-            Alert.alert("Hata", "Beğeni işlemi sırasında bir sorun oluştu.");
-        }
-    };
+                if (isCurrentlyLiked) {
+                    // Beğeniyi geri al
+                    const { error } = await supabase.from('likes').delete().match({ post_id: postId, user_id: user.id });
+                    if (error) throw error;
+                } else {
+                    // Beğen
+                    const { error } = await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+                    if (error) throw error;
+                }
+            } catch (error) {
+                console.error("Beğeni hatası:", error);
+                // 3. ADIM: Eğer hata olursa, yaptığın iyimser güncellemeyi geri al
+                setFeedData(currentFeed => 
+                    currentFeed.map(post => {
+                        if (post.id === postId) {
+                            return {
+                                ...post,
+                                is_liked_by_user: isCurrentlyLiked, // Durumu eski haline getir
+                                like_count: isCurrentlyLiked ? post.like_count + 1 : post.like_count - 1 // Sayıyı eski haline getir
+                            };
+                        }
+                        return post;
+                    })
+                );
+                Alert.alert("Hata", "Beğeni işlemi sırasında bir sorun oluştu.");
+            }
+            // 'fetchFeed()' ÇAĞRISINI BURADAN KALDIRDIK!
+        };
 
     useFocusEffect(
         useCallback(() => {
@@ -112,8 +140,11 @@ const HomeScreen = ({ stackNavigation }) => {
                         caption: item.caption,
                         postImage: item.image_url,
                         // Veritabanından gelen yeni verileri ekliyoruz
-                        likeCount: item.like_count,
-                        isLiked: item.is_liked_by_user, // 'isLiked' olarak gönderiyoruz
+                        likeCount: item.like_count || 0, // null ise 0 göster
+                        isLiked: item.is_liked_by_user,
+                        commentCount: item.comment_count || 0, // null ise 0 göster
+
+
                     };
 
                 return <PostCard post={postCardProps} 

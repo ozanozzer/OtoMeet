@@ -3,12 +3,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import colors from '../../constants/colors';
 
 // Component artık 'post' ve 'onLikeToggle' proplarını alıyor
 const PostCard = ({ post, onLikeToggle }) => {
+
+    const navigation = useNavigation(); 
+
 
     // Zamanı formatlayan yardımcı fonksiyon
     const formatTimestamp = (timestamp) => {
@@ -53,10 +57,19 @@ const PostCard = ({ post, onLikeToggle }) => {
                     <Text style={styles.statText}>{post.likeCount}</Text>
                 </TouchableOpacity>
 
-                <View style={styles.statItem}>
+                 <TouchableOpacity 
+                    style={styles.statItem} 
+                    onPress={() => navigation.navigate('Comments', {
+                        postId: post.id,
+                        postImageUrl: post.postImage,
+                        postCaption: post.caption,
+                    })}
+                >
                     <Ionicons name="chatbubble-outline" size={20} color={colors.icon} />
                     <Text style={styles.statText}>{post.commentCount}</Text>
-                </View>
+                    
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.shareIcon}>
                     <Ionicons name="share-social-outline" size={22} color={colors.icon} />
                 </TouchableOpacity>

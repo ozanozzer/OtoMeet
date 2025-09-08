@@ -16,6 +16,7 @@ import ChatScreen from './src/screens/Messages/ChatScreen';
 import FollowersScreen from './src/screens/Home/Profile/FollowersScreen';
 import FollowingScreen from './src/screens/Home/Profile/FollowingScreen';
 import CreatePostScreen from './src/screens/Post/CreatePostScreen';
+import CommentsScreen from './src/screens/Post/CommentScreen';
 
 const Stack = createStackNavigator();
 
@@ -122,6 +123,7 @@ export default function App() {
           <Stack.Group screenOptions={{ presentation: 'modal' }}>
               <Stack.Screen name="CreatePost" component={CreatePostScreen} />
           </Stack.Group>
+          <Stack.Screen name="Comments" component={CommentsScreen} />
           
         </Stack.Navigator>
       </NavigationContainer>
