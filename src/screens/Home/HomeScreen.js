@@ -1,9 +1,9 @@
 // src/screens/Home/HomeScreen.js
 
-import React, { useState, useCallback, useEffect } from 'react'; // useEffect eklendi
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, FlatList, Alert, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+// useFocusEffect artık kullanılmıyor, silebilirsin.
 import { ActivityIndicator } from 'react-native-paper';
 
 import colors from '../../constants/colors';
@@ -19,7 +19,7 @@ const HomeScreen = ({ stackNavigation }) => {
     const [feedData, setFeedData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentUserProfile, setCurrentUserProfile] = useState(null);
-
+    const [activeTab, setActiveTab] = useState('following');
     const [currentUser, setCurrentUser] = useState(null);
 
     useEffect(() => {
@@ -28,10 +28,21 @@ const HomeScreen = ({ stackNavigation }) => {
         });
     }, []);
 
-
+    // --- DEĞİŞİKLİK: fetchFeed artık parametre almıyor, activeTab state'ini kullanıyor ---
     const fetchFeed = async () => {
+        // ÖNCE, 'activeTab'in o anki değerini alalım
+        const currentTab = activeTab;
+        const functionName = currentTab === 'following' ? 'get_feed_posts' : 'get_explore_posts';
+
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            // Promise.all ile iki isteği AYNI ANDA gönderelim, daha hızlı!
+            const [profileRes, feedRes] = await Promise.all([
+                supabase.auth.getUser(),
+                supabase.rpc(functionName, { page: 1, page_size: 10 })
+            ]);
+
+            // 1. Profil fotoğrafı sonucunu işle
+            const user = profileRes.data?.user;
             if (user) {
                 const { data: profileData, error: profileError } = await supabase
                     .from('profiles')
@@ -40,15 +51,13 @@ const HomeScreen = ({ stackNavigation }) => {
                     .single();
                 if (profileError) throw profileError;
                 setCurrentUserProfile(profileData);
+            } else {
+                setCurrentUserProfile(null);
             }
 
-            const { data, error } = await supabase.rpc('get_feed_posts', {
-                page: 1, 
-                page_size: 10
-            });
-
-            if (error) throw error;
-            setFeedData(data || []);
+            // 2. Akış gönderileri sonucunu işle
+            if (feedRes.error) throw feedRes.error;
+            setFeedData(feedRes.data || []);
 
         } catch (error) {
             Alert.alert("Hata", "Ana akış yüklenirken bir sorun oluştu.");
@@ -58,40 +67,52 @@ const HomeScreen = ({ stackNavigation }) => {
         }
     };
 
-    const handleLikeToggle = async (postId, isCurrentlyLiked) => {
+    // DEĞİŞİKLİK: useEffect'in fetchFeed'i doğru çağırdığından emin ol
+    useEffect(() => {
+        setLoading(true);
+        // fetchFeed artık parametre almıyor, en üstteki 'activeTab' state'ini kullanıyor
+        fetchFeed();
+    }, [activeTab]); // 'activeTab' değiştiğinde bu fonksiyon yeniden çalışır
+
+    const handleLikeToggle = useCallback(async (postId, isCurrentlyLiked) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 1. İyimser Güncelleme: Arayüzü anında değiştir
         setFeedData(currentFeed => 
             currentFeed.map(post => {
                 if (post.id === postId) {
-                    return {
-                        ...post,
-                        is_liked_by_user: !isCurrentlyLiked,
-                        like_count: isCurrentlyLiked ? post.like_count - 1 : post.like_count + 1
+                    return { 
+                        ...post, 
+                        is_liked_by_user: !isCurrentlyLiked, 
+                        like_count: post.like_count + (isCurrentlyLiked ? -1 : 1) 
                     };
                 }
                 return post;
             })
         );
 
+        // 2. Veritabanı İşlemi: Arka planda Supabase'e isteği gönder
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
             if (isCurrentlyLiked) {
+                // Beğeniyi geri al
                 const { error } = await supabase.from('likes').delete().match({ post_id: postId, user_id: user.id });
                 if (error) throw error;
             } else {
+                // Beğen
                 const { error } = await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
                 if (error) throw error;
             }
         } catch (error) {
             console.error("Beğeni hatası:", error);
+            // 3. Hata olursa: Yaptığın iyimser güncellemeyi geri al
             setFeedData(currentFeed => 
                 currentFeed.map(post => {
                     if (post.id === postId) {
-                        return {
-                            ...post,
-                            is_liked_by_user: isCurrentlyLiked,
-                            like_count: isCurrentlyLiked ? post.like_count + 1 : post.like_count - 1
+                        return { 
+                            ...post, 
+                            is_liked_by_user: isCurrentlyLiked, 
+                            like_count: post.like_count 
                         };
                     }
                     return post;
@@ -99,21 +120,14 @@ const HomeScreen = ({ stackNavigation }) => {
             );
             Alert.alert("Hata", "Beğeni işlemi sırasında bir sorun oluştu.");
         }
-    };
-
-    useFocusEffect(
-        useCallback(() => {
-            setLoading(true);
-            fetchFeed();
-        }, [])
-    );
+    }, []); // useCallback ile sarmaladık
 
     if (loading) {
         return (
             <View style={[styles.container, { paddingTop: insets.top }]}>
-                {/* DÜZELTME 3: stackNavigation prop'u eklendi */}
-                <HomeHeader userAvatar={null} stackNavigation={stackNavigation} /> 
-                <FilterBar />
+                {/* DÜZELTME: stackNavigation prop'u eklendi */}
+                <HomeHeader userAvatar={currentUserProfile?.avatar_url} stackNavigation={stackNavigation} /> 
+                <FilterBar activeTab={activeTab} onTabChange={setActiveTab} />
                 <View style={styles.center}>
                     <ActivityIndicator color={colors.accent} />
                 </View>
@@ -124,7 +138,8 @@ const HomeScreen = ({ stackNavigation }) => {
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
              <HomeHeader userAvatar={currentUserProfile?.avatar_url} stackNavigation={stackNavigation} />
-            <FilterBar />
+             {/* DÜZELTME: FilterBar'a proplar gönderildi */}
+            <FilterBar activeTab={activeTab} onTabChange={setActiveTab} />
             
             <FlatList
                 data={feedData}
@@ -143,7 +158,6 @@ const HomeScreen = ({ stackNavigation }) => {
                         commentCount: item.comment_count || 0,
                     };
 
-                    // DÜZELTME 2: Fazladan 'currentUser' prop'u kaldırıldı
                     return <PostCard 
                                 post={postCardProps} 
                                 onLikeToggle={handleLikeToggle}
@@ -185,5 +199,3 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
-
-// asd
